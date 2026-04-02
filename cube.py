@@ -1,5 +1,5 @@
 import numpy as np
-from collections import deque
+import pandas as pd
 
 """
               |--------|
@@ -254,14 +254,16 @@ def gerar_grafo(initial_state_arr: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
             else: 
                 next_layer = np.vstack([next_layer, new_states])
 
-        next_layer: np.ndarray = np.unique(next_layer, axis=0)
+        next_layer_view = next_layer.view(dtype='S16').ravel()
 
-        next_layer = np.ascontiguousarray(next_layer)
+        next_layer_view: np.ndarray = pd.unique(next_layer_view)
+
+        next_layer_view = np.ascontiguousarray(next_layer_view)
         all_unique_states = np.ascontiguousarray(all_unique_states)
 
-        b16 = np.dtype('S16')
-        mask = np.isin(next_layer.view(dtype=b16).ravel(), all_unique_states.view(dtype=b16).ravel(), assume_unique=True, invert=True)
+        mask = np.isin(next_layer_view, all_unique_states.view(dtype='S16').ravel(), assume_unique=True, invert=True)
 
+        next_layer = next_layer_view.view(np.uint8).reshape(-1,16)
         current_layer = next_layer[mask]
 
         all_unique_states = np.vstack([all_unique_states, current_layer])
@@ -269,6 +271,3 @@ def gerar_grafo(initial_state_arr: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         offset = offset_high
 
     return all_unique_states, state_mapping
-
-        
-gerar_grafo(initial_state)
