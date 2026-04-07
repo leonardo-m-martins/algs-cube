@@ -1,5 +1,5 @@
-from BuscaNP import buscaNP
-import F_auxiliares as fa
+from .BuscaNP import buscaNP
+import algoritmos.F_auxiliares as fa
 from os import system
 
 while(True):

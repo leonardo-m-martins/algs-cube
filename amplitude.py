@@ -1,44 +1,22 @@
-import numpy as np
-from algoritmos.BuscaNP import buscaNP
-from cube import initial_state, apply_move
+# Exemplo de como aplicar o algoritmo de amplitude para um cubo aleatório
 
-# 1. Carrega os arquivos .npy
-nos_array = np.load("grafo_estados.npy")
-adj_data = np.load("grafo_adj_data.npy")
-adj_offsets = np.load("grafo_adj_offsets.npy")
+import algoritmos.BuscaNP as BuscaNP
+from Cube import Cube, grafo, nos, MOVES, get_state_lup
+from numpy import uint32
+import random as rd
 
-# 2. Criamos uma classe "FakeList" para enganar o .index()
-class FastNos(list):
-    def __init__(self, array):
-        self.array = array
-        # Criamos o mapa de busca rápida uma única vez
-        self.mapa = {self.array[i].tobytes(): i for i in range(len(self.array))}
-    
-    def index(self, estado):
-        # Transforma o array do nó em bytes e busca no dicionário O(1)
-        return self.mapa[estado.tobytes() if isinstance(estado, np.ndarray) else estado]
-    
-    def __getitem__(self, i):
-        return self.array[i].tobytes()
+busca_np = BuscaNP.buscaNP()
 
-# 3. Criamos um dicionário de adjacências para o parâmetro 'grafo'
-# Para não mudar a função, 'grafo' precisa ser algo que retorne os vizinhos
-grafo_dict = {}
-for i in range(len(nos_array)):
-    start = adj_offsets[i]
-    end = adj_offsets[i+1]
-    # Guardamos os estados (bytes) dos vizinhos
-    indices_v = adj_data[start:end]
-    grafo_dict[i] = [nos_array[idx].tobytes() for idx in indices_v]
+cube = Cube()
+cube.print()
 
-# Instanciamos os objetos que sua função pede
-nos_prontos = FastNos(nos_array)
+for i in range(100):
+    cube.move_inplace(MOVES[rd.randint(0, 8)])
 
-buscador = buscaNP()
+print('\n')
+caminho = busca_np.amplitude_grafo(inicio=uint32(cube.get_id()), fim=uint32(0), nos=nos, grafo=grafo)
 
-# caminho = buscador.amplitude_grafo(
-#     inicio=inicio_bytes, 
-#     fim=initial_state.tobytes(), 
-#     nos=nos_prontos, 
-#     grafo=grafo_dict
-# )
+print(f'Caminho de tamanho {len(caminho) - 1}: {caminho}')
+
+for c in caminho:
+    get_state_lup(c).print()
