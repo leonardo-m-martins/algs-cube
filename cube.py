@@ -1,5 +1,5 @@
 import numpy as np
-from cube import generate_cubes, get_heuristic
+from cube_engine import generate_cubes, get_heuristic
 
 """
               |--------|
@@ -187,23 +187,14 @@ class Cube:
         return new_cube
 
     def get_id(self) -> int:
-        # ==========================================
-        # 1. ORIENTATION ID (High 64 bits equivalent)
-        # ==========================================
 
         ori_id = 0
         for i in range(6):
             ori_id += int(self.state[i + 8]) * (3 ** i)
 
-
-        # ==========================================
-        # 2. PERMUTATION ID (Low 64 bits equivalent)
-        # ==========================================
         perm_state = self.state[:8]
         counts = np.zeros(8, dtype=np.uint32)
         
-        # Calculate Lehmer code inversion counts
-        # Effectively: current_val - (number of smaller previous elements)
         for i in range(8):
             smaller_to_left = np.sum(perm_state[i] > perm_state[:i])
             counts[i] = perm_state[i] - smaller_to_left
@@ -212,9 +203,6 @@ class Cube:
         perm_weights = np.array([720, 120, 24, 6, 2, 1, 0, 0], dtype=np.uint32)
         perm_id = np.dot(counts, perm_weights)
         
-        # ==========================================
-        # 3. COMBINE
-        # ==========================================
         return int((perm_id * 729) + ori_id)
 
     def print(self) -> None:
