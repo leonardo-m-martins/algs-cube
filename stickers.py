@@ -1,5 +1,6 @@
 from cube import Cube
 from copy import deepcopy
+import numpy as np
 
 #------------------------
 #- ENUMS
@@ -62,117 +63,115 @@ ori_rl_ud = {
     Subcubes.BLD: 1
 }
 
-p012 = (0, 1, 2)
-p021 = (0, 2, 1)
-p102 = (1, 0, 2)
-p120 = (1, 2, 0)
-p201 = (2, 0, 1)
-p210 = (2, 1, 0)
+def create_ori_stickers_array():
+    p012 = (0, 1, 2)
+    p021 = (0, 2, 1)
+    p102 = (1, 0, 2)
+    p120 = (1, 2, 0)
+    p201 = (2, 0, 1)
+    p210 = (2, 1, 0)
 
-pattern_1 = (p012, p201, p120)
-pattern_2 = (p102, p210, p021)
-pattern_3 = (p102, p021, p210)
-pattern_4 = (p012, p120, p201)
+    FRU = (
+        (p102, p210, p021),
+        (p012, p201, p120),
+        (p012, p201, p120),
+        (p102, p210, p021),
+        (p012, p201, p120),
+        (p102, p210, p021),
+        (p012, p201, p120),
+        (p012, p012, p012)
+    )
 
-FRU = {
-    Subcubes.FRU: pattern_1,
-    Subcubes.FRD: pattern_2,
-    Subcubes.FLU: pattern_2,
-    Subcubes.FLD: pattern_1,
-    Subcubes.BRU: pattern_2,
-    Subcubes.BRD: pattern_1,
-    Subcubes.BLU: pattern_1,
-    Subcubes.BLD: (p012, p012, p012)
-}
+    FLU = (
+        (p012, p201, p120),
+        (p102, p021, p210),
+        (p102, p021, p210),
+        (p012, p120, p201),
+        (p012, p120, p201),
+        (p012, p120, p201),
+        (p102, p021, p210),
+        (p012, p012, p012)
+    )
 
-FLU = {
-    Subcubes.FRU: pattern_3,
-    Subcubes.FRD: pattern_4,
-    Subcubes.FLU: pattern_1,
-    Subcubes.FLD: pattern_3,
-    Subcubes.BRU: pattern_4,
-    Subcubes.BRD: pattern_3,
-    Subcubes.BLU: pattern_4,
-    Subcubes.BLD: (p012, p012, p012)
-}
+    FRD = (
+        (p012, p201, p120),
+        (p102, p021, p210),
+        (p102, p210, p021),
+        (p012, p201, p120),
+        (p102, p021, p210),
+        (p012, p120, p201),
+        (p102, p021, p210),
+        (p012, p012, p012)
+    )
 
-FRD = {
-    Subcubes.FRU: pattern_3,
-    Subcubes.FRD: pattern_1,
-    Subcubes.FLU: pattern_1,
-    Subcubes.FLD: pattern_2,
-    Subcubes.BRU: pattern_4,
-    Subcubes.BRD: pattern_3,
-    Subcubes.BLU: pattern_3,
-    Subcubes.BLD: (p012, p012, p012)
-}
+    FLD = (
+        (p102, p210, p021),
+        (p012, p201, p120),
+        (p012, p201, p120),
+        (p102, p210, p021),
+        (p012, p201, p120),
+        (p102, p210, p021),
+        (p012, p201, p120),
+        (p012, p012, p012)
+    )
 
-FLD = {
-    Subcubes.FRU: (p012, p201, p120),
-    Subcubes.FRD: (p102, p210, p021),
-    Subcubes.FLU: (p102, p210, p021),
-    Subcubes.FLD: (p012, p201, p120),
-    Subcubes.BRU: (p102, p210, p021),
-    Subcubes.BRD: (p012, p201, p120),
-    Subcubes.BLU: (p012, p201, p120),
-    Subcubes.BLD: (p012, p012, p012)
-}
-
-BRD = {
-    Subcubes.FRU: pattern_1,
-    Subcubes.FRD: pattern_2, 
-    Subcubes.FLU: pattern_2,
-    Subcubes.FLD: pattern_1,
-    Subcubes.BRU: pattern_2,
-    Subcubes.BRD: pattern_1,
-    Subcubes.BLU: pattern_1,
-    Subcubes.BLD: (p012, p012, p012)
-}
+    BRD = (
+        (p102, p210, p021),
+        (p012, p201, p120),
+        (p012, p201, p120),
+        (p102, p210, p021),
+        (p012, p201, p120),
+        (p102, p210, p021),
+        (p012, p201, p120),
+        (p012, p012, p012)
+    )
 
 
-BRU = {
-    Subcubes.FRU: (p102, p021, p210),
-    Subcubes.FRD: (p012, p120, p201), 
-    Subcubes.FLU: (p012, p120, p201),
-    Subcubes.FLD: (p102, p021, p210),
-    Subcubes.BRU: (p012, p120, p201),
-    Subcubes.BRD: (p102, p021, p210),
-    Subcubes.BLU: (p102, p021, p210),
-    Subcubes.BLD: (p012, p012, p012)
-}
+    BRU = (
+        (p012, p120, p201),
+        (p102, p021, p210),
+        (p102, p021, p210),
+        (p012, p120, p201),
+        (p102, p021, p210),
+        (p012, p120, p201),
+        (p102, p021, p210),
+        (p012, p012, p012)
+    )
 
-BLU = {
-    Subcubes.FRU: (p012, p201, p120),
-    Subcubes.FRD: (p102, p210, p021),
-    Subcubes.FLU: (p102, p210, p021),
-    Subcubes.FLD: (p012, p201, p120),
-    Subcubes.BRU: (p102, p210, p021),
-    Subcubes.BRD: (p012, p201, p120),
-    Subcubes.BLU: (p012, p201, p120),
-    Subcubes.BLD: (p012, p012, p012)
-}
+    BLU = (
+        (p102, p210, p021),
+        (p012, p201, p120),
+        (p012, p201, p120),
+        (p102, p210, p021),
+        (p012, p201, p120),
+        (p102, p210, p021),
+        (p012, p201, p120),
+        (p012, p012, p012)
+    )
 
-BLD = {
-    Subcubes.FRU: (p012, p201, p120),
-    Subcubes.FRD: (p102, p210, p021),
-    Subcubes.FLU: (p102, p210, p021),
-    Subcubes.FLD: (p012, p201, p120),
-    Subcubes.BRU: (p102, p210, p021),
-    Subcubes.BRD: (p012, p201, p120),
-    Subcubes.BLU: (p012, p201, p120),
-    Subcubes.BLD: (p012, p012, p012)
-}
+    BLD = (
+        (p102, p210, p021),
+        (p012, p201, p120),
+        (p012, p201, p120),
+        (p102, p210, p021),
+        (p012, p201, p120),
+        (p102, p210, p021),
+        (p012, p201, p120),
+        (p012, p012, p012)
+    )
 
-ori_stickers = {
-    Subcubes.FRU: FRU,
-    Subcubes.FRD: FRD,
-    Subcubes.FLU: FLU,
-    Subcubes.FLD: FLD,
-    Subcubes.BRU: BRU,
-    Subcubes.BRD: BRD,
-    Subcubes.BLU: BLU,
-    Subcubes.BLD: {Subcubes.BLD: (p012, p012, p012)} # VERIFICADO
-}
+    return np.array([
+        FLU,
+        FRU,
+        FLD,
+        FRD,
+        BLU,
+        BRU,
+        BRD,
+        BLD
+    ], dtype=np.uint8)
+
+ori_stickers = create_ori_stickers_array()
 
 # alterar para que a ordem não importe
 def hash_colors(colors: list):
@@ -220,7 +219,7 @@ class StickersCube:
                 colors = solved[cube.state[subcube]]
                 ori = int(cube.state[subcube + 8])
 
-                stickers = ori_stickers[subcube][goal][ori]
+                stickers = ori_stickers[subcube, goal, ori]
                 zero = stickers[0]
                 one = stickers[1]
                 two = stickers[2]
@@ -261,6 +260,7 @@ class StickersCube:
         for subcube, colors in self.state.items():
             # Perm
             cube_state[subcube] = goals[hash_colors(colors)]
+            
 
             # Ori
             # Ori correta
