@@ -1,7 +1,7 @@
 # Exemplo de como aplicar o algoritmo de amplitude para um cubo aleatório
 
 import algoritmos.BuscaNP as BuscaNP
-from Cube import Cube, grafo, nos, MOVES, get_state_lup
+from cube import Cube, grafo, nos, MOVES, get_state_lup
 from numpy import uint32
 import random as rd
 

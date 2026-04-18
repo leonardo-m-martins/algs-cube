@@ -1,5 +1,6 @@
 import numpy as np
 from cube_engine import generate_cubes, get_heuristic
+import random as rd
 
 """
               |--------|
@@ -210,6 +211,10 @@ class Cube:
         ori_str = " ".join(str(x) for x in self.state[8:])
         print(f"Perm: {perm_str} | Ori: {ori_str} | Id: {self.get_id()}")
         pass
+
+    def scramble(self) -> None:
+        for _ in range(100):
+            self.move_inplace(rd.choice(MOVES))
 
     def __eq__(self, value):
         return type(value) == type(self) and hash(self) == hash(value)

@@ -1,70 +1,81 @@
 import tkinter as tk
 from tkinter import ttk
+from stickers import StickersCube, Subcubes, Colors, OFFSETS
+from cube import Cube, get_state_lup, grafo, nos
+from algoritmos.BuscaNP import buscaNP
 
 # Cores padrão do Cubo Mágico
-COLORS = ['white', 'red', 'blue', 'orange', 'green', 'yellow']
+COLORS = {Colors.WHITE: 'white', Colors.RED: 'red', Colors.BLUE: 'blue', Colors.ORANGE: 'orange', Colors.GREEN: 'green', Colors.YELLOW: 'yellow'}
+COLORS_REVERSED_MAP = {value: key for key, value in COLORS.items()}
+
+busca = buscaNP()
+
+def apply_algorithm(algo: str, initial, objective):
+    algos = ('Amplitude', 'Profundidade', 'Profundidade Limitada', 
+             'Aprofundamento Iterativo', 'Bidirecional', 'Custo Uniforme', 
+             'Greedy', 'A*', 'IDA* (AIA)')
+    if algo == algos[0]:
+        return busca.amplitude_grafo(initial, objective, nos=nos, grafo=grafo)
+    if algo == algos[1]:
+        return busca.profundidade_grafo(initial, objective, nos, grafo)
+    if algo == algos[2]:
+        return busca.prof_limitada_grafo(initial, objective, nos, grafo, 14)
+    if algo == algos[3]:
+        return busca.aprof_iterativo_grafo(initial, objective, nos, grafo, 14)
+    if algo == algos[4]:
+        return busca.bidirecional(initial, objective, nos, grafo)
+    else: 
+        raise Exception("Não implementado")
 
 std_font = ("Arial", 10, "bold")
 
 class CubeNet(tk.Canvas):
     """Componente gráfico que desenha a planificação de um cubo 2x2x2."""
-    def __init__(self, master, sticker_size=30, editable=True, **kwargs):
+    def __init__(self, master, sticker_size=30, editable=True, cube: StickersCube=None, scramble: bool=False, **kwargs):
         super().__init__(master, width=sticker_size*8, height=sticker_size*6, bg='#f0f0f0', highlightthickness=0, **kwargs)
         self.size = sticker_size
         self.editable = editable
         self.stickers = {} # Armazena os IDs dos retângulos
-        self.state = []    # Armazena as cores atuais
+        if cube:
+            self.cube = cube
+        else:
+            self.cube = StickersCube()
+
+        if scramble:
+            self.cube.scramble()
         
-        # Mapeamento das faces na planificação (coluna, linha) em blocos 2x2
-        # U(Top), L(Left), F(Front), R(Right), B(Back), D(Bottom)
-        faces_layout = {
-            'U': (2, 0),
-            'L': (0, 2),
-            'F': (2, 2),
-            'R': (4, 2),
-            'B': (6, 2),
-            'D': (2, 4)
-        }
-        
-        self.draw_net(faces_layout)
+        self.draw_net()
         if self.editable:
             self.bind("<Button-1>", self.on_click)
 
-    def draw_net(self, layout):
-        idx = 0
-        for face, (col_offset, row_offset) in layout.items():
-            for row in range(2):
-                for col in range(2):
-                    x1 = (col_offset + col) * self.size
-                    y1 = (row_offset + row) * self.size
-                    x2 = x1 + self.size
-                    y2 = y1 + self.size
-                    
-                    # Cor inicial padrão (pode ser alterada)
-                    color = COLORS[list(layout.keys()).index(face)]
-                    
-                    rect_id = self.create_rectangle(x1, y1, x2, y2, fill=color, outline='black', width=2)
-                    self.stickers[rect_id] = idx
-                    self.state.append(color)
-                    idx += 1
+    def draw_net(self):
+        for i, OFFSET in enumerate(OFFSETS):
+            for key in self.cube.state.keys():
+                if key not in OFFSET: continue
 
-    def on_click(self, event):
+                x1, y1 = OFFSET[key]
+                x1 *= self.size
+                y1 *= self.size
+                x2 = x1 + self.size
+                y2 = y1 + self.size
+
+                color_idx = self.cube.state[key][i % 3]
+                color = COLORS[color_idx]
+
+                rect_id = self.create_rectangle(x1, y1, x2, y2, fill=color, outline='black', width=2)
+                self.stickers[rect_id] = (key, i % 3)
+            
+
+    def on_click(self):
         item = self.find_withtag("current")
         if item:
             rect_id = item[0]
             current_color = self.itemcget(rect_id, "fill")
-            next_color = COLORS[(COLORS.index(current_color) + 1) % len(COLORS)]
+            next_color_idx = (COLORS_REVERSED_MAP[current_color] + 1) % len(COLORS)
+            next_color = COLORS[next_color_idx]
             self.itemconfig(rect_id, fill=next_color)
-            idx = self.stickers[rect_id]
-            self.state[idx] = next_color
-
-    def get_state(self):
-        return self.state.copy()
-
-    def set_state(self, new_state):
-        self.state = new_state.copy()
-        for rect_id, idx in self.stickers.items():
-            self.itemconfig(rect_id, fill=self.state[idx])
+            key, idx = self.stickers[rect_id]
+            self.cube.state[key][idx] = next_color_idx
 
 class RubiksSolverGUI:
     def __init__(self, root):
@@ -104,7 +115,7 @@ class RubiksSolverGUI:
         frame_initial = tk.Frame(states_frame)
         frame_initial.pack(side=tk.LEFT, expand=True)
         tk.Label(frame_initial, text="Estado Inicial (Clique para alterar)", font=std_font).pack()
-        self.cube_initial = CubeNet(frame_initial)
+        self.cube_initial = CubeNet(frame_initial, scramble=True)
         self.cube_initial.pack(pady=10)
 
         # Estado Objetivo
@@ -145,27 +156,17 @@ class RubiksSolverGUI:
     def solve(self):
         """Método chamado ao clicar em Resolver. Aqui você conectará seu backend."""
         algo = self.algo_var.get()
-        start_state = self.cube_initial.get_state()
-        goal_state = self.cube_goal.get_state()
-        
-        # ==========================================
-        # TODO: SUBSTITUIR PELO SEU ALGORITMO REAL
-        # ==========================================
-        # Aqui é onde o programa enviará `start_state` e `goal_state`
-        # para o seu motor de busca em Python.
+
+        print(self.cube_initial.cube.validate_stickers())
+
+        id_start = self.cube_initial.cube.get_cube().get_id()
+        id_goal = self.cube_result.cube.get_cube().get_id()
+        self.solution_path = apply_algorithm(algo, id_start, id_goal)
         
         # SIMULAÇÃO DE RESULTADO:
-        mock_cost = 3
-        mock_path_str = "R U R'"
+        mock_cost = len(self.solution_path)
+        mock_path_str = "sdfgjkl"
         
-        # Simulando os estados do cubo a cada passo (para o visualizador gráfico)
-        # Em um cenário real, seu algoritmo retornará a lista de estados intermediários
-        self.solution_path = [
-            start_state,
-            start_state, # Mock do estado 1
-            start_state, # Mock do estado 2
-            goal_state   # Estado final
-        ]
         # ==========================================
 
         # Atualizando a UI com os resultados textuais
@@ -187,7 +188,9 @@ class RubiksSolverGUI:
         self.lbl_step.config(text=f"Passo: {self.current_step}/{total_steps}")
         
         current_state = self.solution_path[self.current_step]
-        self.cube_result.set_state(current_state)
+        sticker_cube = StickersCube(cube=get_state_lup(current_state), BLD=self.cube_initial.cube.get_BLD())
+        self.cube_result.cube = sticker_cube
+        self.cube_result.draw_net()
 
         self.btn_prev.config(state=tk.NORMAL if self.current_step > 0 else tk.DISABLED)
         self.btn_next.config(state=tk.NORMAL if self.current_step < total_steps else tk.DISABLED)
