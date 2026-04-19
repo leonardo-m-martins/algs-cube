@@ -347,7 +347,8 @@ class RubiksSolverGUI:
     def solve(self, algo):
         """Called by the ControlPanel when the solve button is clicked."""
         id_start = self.states_panel.cube_initial.cube.get_cube().get_id()
-        id_goal = self.states_panel.cube_goal.cube.get_cube().get_id()
+        goal_sticker_cube = self.states_panel.cube_goal.cube.copy_match_BLD(self.states_panel.cube_initial.cube.get_BLD())
+        id_goal = goal_sticker_cube.get_cube().get_id()
         
         # Backend Processing
         solution_path = apply_algorithm(algo, id_start, id_goal)

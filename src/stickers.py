@@ -75,7 +75,7 @@ def create_ori_stickers_array():
         (p012, p120, p201),
         (p102, p021, p210),
         (p102, p021, p210),
-        (p012, p201, p120),
+        (p012, p120, p201),
         (p102, p021, p210),
         (p012, p120, p201),
         (p102, p021, p210),
@@ -222,8 +222,21 @@ class StickersCube:
         return self.state[Subcubes.BLD]
     
     def get_cube(self) -> Cube:
-        b, l, d = self.state[Subcubes.BLD]
-        f, r, u = (b + 3) % 6, (l + 3) % 6, (d + 3) % 6
+        b_color, l_color, d_color = self.state[Subcubes.BLD]
+        f_color, r_color, u_color = (b_color + 3) % 6, (l_color + 3) % 6, (d_color + 3) % 6
+
+        b, l, d = Colors.ORANGE, Colors.BLUE, Colors.WHITE 
+        f, r, u = Colors.RED, Colors.GREEN, Colors.YELLOW
+
+        relative_map = {
+            b_color: b,
+            l_color: l,
+            d_color: d,
+            f_color: f,
+            r_color: r,
+            u_color: u
+        }
+
         cube_state = [-1 for _ in range(16)]
 
         goals = {
@@ -238,12 +251,14 @@ class StickersCube:
         }
 
         for subcube, colors in self.state.items():
+            relative_colors = [relative_map[color] for color in colors]
+
             # Perm
-            goal = goals[hash_colors(colors)]
+            goal = goals[hash_colors(relative_colors)]
             cube_state[subcube] = goal
 
             # Ori
-            current_ori_pattern = tuple(np.array(colors) % 3)
+            current_ori_pattern = tuple(np.array(relative_colors) % 3)
             available_patterns = [tuple(row) for row in ori_stickers[subcube, goal]]
             
             cube_state[subcube + 8] = available_patterns.index(current_ori_pattern)
@@ -254,6 +269,118 @@ class StickersCube:
         cube = self.get_cube()
         cube.scramble()
         self.state = StickersCube(cube=cube, BLD=self.get_BLD()).state
+
+    def rotate_x(self):
+        """Rotates the entire cube on the X axis (R face direction)."""
+        new_state = {}
+        # Mapping the movement of the pieces
+        mapping = {
+            Subcubes.FLU: Subcubes.BLU,
+            Subcubes.BLU: Subcubes.BLD,
+            Subcubes.BLD: Subcubes.FLD,
+            Subcubes.FLD: Subcubes.FLU,
+            Subcubes.FRU: Subcubes.BRU,
+            Subcubes.BRU: Subcubes.BRD,
+            Subcubes.BRD: Subcubes.FRD,
+            Subcubes.FRD: Subcubes.FRU
+        }
+        for old_pos, new_pos in mapping.items():
+            colors = self.state[old_pos]
+            # X rotation swaps F/B (index 0) with U/D (index 2)
+            new_state[new_pos] = [colors[2], colors[1], colors[0]]
+        self.state = new_state
+
+    def rotate_y(self):
+        """Rotates the entire cube on the Y axis (U face direction)."""
+        new_state = {}
+        mapping = {
+            Subcubes.FLU: Subcubes.BLU,
+            Subcubes.BLU: Subcubes.BRU,
+            Subcubes.BRU: Subcubes.FRU,
+            Subcubes.FRU: Subcubes.FLU,
+            Subcubes.FLD: Subcubes.BLD,
+            Subcubes.BLD: Subcubes.BRD,
+            Subcubes.BRD: Subcubes.FRD,
+            Subcubes.FRD: Subcubes.FLD
+        }
+        for old_pos, new_pos in mapping.items():
+            colors = self.state[old_pos]
+            # Y rotation swaps F/B (index 0) with L/R (index 1)
+            new_state[new_pos] = [colors[1], colors[0], colors[2]]
+        self.state = new_state
+
+    def rotate_z(self):
+        """Rotates the entire cube on the Z axis (F face direction)."""
+        new_state = {}
+        mapping = {
+            Subcubes.FLU: Subcubes.FRU,
+            Subcubes.FRU: Subcubes.FRD,
+            Subcubes.FRD: Subcubes.FLD,
+            Subcubes.FLD: Subcubes.FLU,
+            Subcubes.BLU: Subcubes.BRU,
+            Subcubes.BRU: Subcubes.BRD,
+            Subcubes.BRD: Subcubes.BLD,
+            Subcubes.BLD: Subcubes.BLU
+        }
+        for old_pos, new_pos in mapping.items():
+            colors = self.state[old_pos]
+            # Z rotation swaps L/R (index 1) with U/D (index 2)
+            new_state[new_pos] = [colors[0], colors[2], colors[1]]
+        self.state = new_state
+
+    def match_BLD(self, BLD: list) -> bool:
+        """
+        Rotates the cube through its 24 possible spatial orientations 
+        until the BLD subcube matches the target_BLD colors.
+        Returns True if a match is found, False otherwise.
+        """
+        def _check_and_y():
+            for _ in range(4):
+                if self.get_BLD() == BLD:
+                    return True
+                self.rotate_y()
+            return False
+
+        if self.get_BLD() == BLD:
+            return True
+
+        # Cycle through all 6 faces pointing Down, and rotate Y 4 times for each
+        
+        # 1. Start orientation (D face is down)
+        if _check_and_y(): return True
+        
+        # 2. B face is down
+        self.rotate_x()
+        if _check_and_y(): return True
+        
+        # 3. U face is down
+        self.rotate_x()
+        if _check_and_y(): return True
+        
+        # 4. F face is down
+        self.rotate_x()
+        if _check_and_y(): return True
+        
+        # Return to start orientation (X x 4 = 360 degrees)
+        self.rotate_x()
+        
+        # 5. R face is down
+        self.rotate_z()
+        if _check_and_y(): return True
+        
+        # 6. L face is down (Z x 2 from R-down puts L-down)
+        self.rotate_z()
+        self.rotate_z()
+        if _check_and_y(): return True
+        
+        # If no match is found, return the cube to its original spatial orientation
+        self.rotate_z()
+        return False
+    
+    def copy_match_BLD(self, BLD):
+        new = StickersCube(cube=self.get_cube(), BLD=self.get_BLD())
+        new.match_BLD(BLD)
+        return new
 
 """
               |--------|
