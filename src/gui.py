@@ -42,7 +42,7 @@ std_font = ("Arial", 10, "bold")
 
 class CubeNet(tk.Canvas):
     """Componente gráfico que desenha a planificação de um cubo 2x2x2."""
-    def __init__(self, master, sticker_size=30, editable=True, cube: StickersCube=None, scramble: bool=False, **kwargs):
+    def __init__(self, master, sticker_size=30, editable=True, cube: StickersCube=None, **kwargs):
         super().__init__(master, width=sticker_size*8, height=sticker_size*6, bg='#f0f0f0', highlightthickness=0, **kwargs)
         self.size = sticker_size
         self.editable = editable
@@ -51,9 +51,6 @@ class CubeNet(tk.Canvas):
             self.cube = cube
         else:
             self.cube = StickersCube()
-
-        if scramble:
-            self.cube.scramble()
         
         self.draw_net()
         if self.editable:
@@ -105,7 +102,8 @@ class ControlPanel(tk.Frame):
         self.algo_combo.current(0)
         self.algo_combo.pack(side=tk.LEFT, padx=10)
 
-        self.btn_solve = tk.Button(self, text="Resolver Cubo", bg="#4CAF50", fg="white", 
+        self.btn_solve = tk.Button(self, text="Resolver Cubo", bg="#4CAF50", fg="white",  
+                                   activebackground="#0A480C", activeforeground="white",
                                    font=std_font, command=self._trigger_solve)
         self.btn_solve.pack(side=tk.LEFT, padx=20)
 
@@ -123,36 +121,56 @@ class StatesPanel(tk.Frame):
         self._setup_ui()
 
     def _setup_ui(self):
+        # Instead of packing the whole self, we'll use grid inside it
+        # Configure columns to distribute weight evenly
+        for i in range(3):
+            self.columnconfigure(i, weight=1)
+
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_rowconfigure(2, weight=1)
+
+        # --- ROW 0, 1: THE CUBES ---
+        
         # Estado Inicial
-        frame_initial = tk.Frame(self)
-        frame_initial.pack(side=tk.LEFT, expand=True)
-        tk.Label(frame_initial, text="Estado Inicial (Clique para alterar)", font=std_font).pack()
-        self.cube_initial = CubeNet(frame_initial, scramble=True)
-        self.cube_initial.pack(pady=10)
+        lbl_initial = tk.Label(self, text="Estado Inicial (Clique para alterar)", font=std_font)
+        lbl_initial.grid(row=0, column=0, sticky="s")
+        self.cube_initial = CubeNet(self)
+        self.cube_initial.grid(row=1, column=0, padx=10, pady=10, sticky="n")
 
         # Estado Objetivo
-        frame_goal = tk.Frame(self)
-        frame_goal.pack(side=tk.LEFT, expand=True)
-        tk.Label(frame_goal, text="Estado Objetivo", font=std_font).pack()
-        self.cube_goal = CubeNet(frame_goal, editable=False)
-        self.cube_goal.pack(pady=10)
+        lbl_goal = tk.Label(self, text="Estado Objetivo", font=std_font)
+        lbl_goal.grid(row=0, column=1, sticky="s")
+        self.cube_goal = CubeNet(self, editable=False)
+        self.cube_goal.grid(row=1, column=1, padx=10, pady=10, sticky="n")
 
         # Visualizador do Resultado Gráfico
-        frame_result = tk.Frame(self)
-        frame_result.pack(side=tk.LEFT, expand=True)
-        tk.Label(frame_result, text="Visualizador do Caminho", font=std_font).pack()
-        self.cube_result = CubeNet(frame_result, editable=False)
-        self.cube_result.pack(pady=10)
+        lbl_result = tk.Label(self, text="Visualizador do Caminho", font=std_font)
+        lbl_result.grid(row=0, column=2, sticky="s")
+        self.cube_result = CubeNet(self, editable=False)
+        self.cube_result.grid(row=1, column=2, padx=10, pady=10, sticky="n")
+
+        # --- ROW 2: Nav, buttons ---
+
+        self.scramble_btn_initial = tk.Button(self, text="Embaralhar", command=lambda net=self.cube_initial: self.scramble(cubeNet=net))
+        self.scramble_btn_initial.grid(row=2, column=0, sticky="n")
+
+        self.scramble_btn_goal = tk.Button(self, text="Embaralhar", command=lambda net=self.cube_goal: self.scramble(cubeNet=net))
+        self.scramble_btn_goal.grid(row=2, column=1, sticky="n")
+
+        nav_frame = tk.Frame(self)
+        nav_frame.grid(row=2, column=2, sticky="n")
+
+        # Inside the nav_frame, we can still use pack for the buttons 
+        # because they are just a simple horizontal line.
+        self.btn_prev = tk.Button(nav_frame, text="<<", command=self.prev_step, state=tk.DISABLED)
+        self.btn_prev.pack(side="left", padx=3)
         
-        # Navigation
-        nav_frame = tk.Frame(frame_result)
-        nav_frame.pack()
-        self.btn_prev = tk.Button(nav_frame, text="< Anterior", command=self.prev_step, state=tk.DISABLED)
-        self.btn_prev.pack(side=tk.LEFT, padx=5)
         self.lbl_step = tk.Label(nav_frame, text="Passo: 0/0")
-        self.lbl_step.pack(side=tk.LEFT, padx=5)
-        self.btn_next = tk.Button(nav_frame, text="Próximo >", command=self.next_step, state=tk.DISABLED)
-        self.btn_next.pack(side=tk.LEFT, padx=5)
+        self.lbl_step.pack(side="left", padx=3)
+
+        self.btn_next = tk.Button(nav_frame, text=">>", command=self.next_step, state=tk.DISABLED)
+        self.btn_next.pack(side="left", padx=3)
+        
 
     def load_solution(self, path):
         self.solution_path = path
@@ -172,6 +190,10 @@ class StatesPanel(tk.Frame):
 
         self.btn_prev.config(state=tk.NORMAL if self.current_step > 0 else tk.DISABLED)
         self.btn_next.config(state=tk.NORMAL if self.current_step < total_steps else tk.DISABLED)
+
+    def scramble(self, cubeNet: CubeNet):
+        cubeNet.cube.scramble()
+        cubeNet.draw_net()
 
     def prev_step(self):
         if self.current_step > 0:
@@ -203,13 +225,13 @@ class ResultsPanel(tk.Frame):
         self.pagination_frame = tk.Frame(self)
         self.pagination_frame.pack(fill=tk.X, pady=(5, 0))
 
-        self.btn_prev_page = tk.Button(self.pagination_frame, text="<< Anterior", command=self.prev_page, state=tk.DISABLED)
+        self.btn_prev_page = tk.Button(self.pagination_frame, text="< Anterior", command=self.prev_page, state=tk.DISABLED)
         self.btn_prev_page.pack(side=tk.LEFT)
 
         self.lbl_page = tk.Label(self.pagination_frame, text="Página 1 de 1")
         self.lbl_page.pack(side=tk.LEFT, expand=True)
 
-        self.btn_next_page = tk.Button(self.pagination_frame, text="Próxima >>", command=self.next_page, state=tk.DISABLED)
+        self.btn_next_page = tk.Button(self.pagination_frame, text="Próximo >", command=self.next_page, state=tk.DISABLED)
         self.btn_next_page.pack(side=tk.RIGHT)
 
     def display_results(self, algo, cost, path_str):
