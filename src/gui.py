@@ -88,62 +88,63 @@ class CubeNet(tk.Canvas):
             key, idx = self.stickers[rect_id]
             self.cube.state[key][idx] = next_color_idx
 
-class RubiksSolverGUI:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Cubo Mágico 2x2x2 - Buscas em IA")
-        self.root.geometry("850x650")
-        
-        self.setup_ui()
-        
-        # Variáveis para controle da visualização da solução
-        self.solution_path = []
-        self.current_step = 0
+class ControlPanel(tk.Frame):
+    """Encapsulates the top control bar (Algorithm selection and Solve button)."""
+    def __init__(self, parent, on_solve_callback, **kwargs):
+        super().__init__(parent, pady=10, **kwargs)
+        self.on_solve_callback = on_solve_callback
+        self._setup_ui()
 
-    def setup_ui(self):
-        # --- PAINEL DE CONTROLE (Topo) ---
-        control_frame = tk.Frame(self.root, pady=10)
-        control_frame.pack(fill=tk.X)
-
-        tk.Label(control_frame, text="Método de Busca:", font=std_font).pack(side=tk.LEFT, padx=10)
+    def _setup_ui(self):
+        tk.Label(self, text="Método de Busca:", font=std_font).pack(side=tk.LEFT, padx=10)
         
         self.algo_var = tk.StringVar()
-        algos = ['Amplitude', 'Profundidade', 'Profundidade Limitada', 
-                 'Aprofundamento Iterativo', 'Bidirecional', 'Custo Uniforme', 
-                 'Greedy', 'A*', 'IDA* (AIA)']
-        self.algo_combo = ttk.Combobox(control_frame, textvariable=self.algo_var, values=algos, state="readonly", width=25)
+        algos = ['Amplitude', 'Profundidade', 'Profundidade Limitada', 'Aprofundamento Iterativo', 
+                 'Bidirecional', 'Custo Uniforme', 'Greedy', 'A*', 'IDA* (AIA)']
+        self.algo_combo = ttk.Combobox(self, textvariable=self.algo_var, values=algos, state="readonly", width=25)
         self.algo_combo.current(0)
         self.algo_combo.pack(side=tk.LEFT, padx=10)
 
-        self.btn_solve = tk.Button(control_frame, text="Resolver Cubo", bg="#4CAF50", fg="white", font=std_font, command=self.solve)
+        self.btn_solve = tk.Button(self, text="Resolver Cubo", bg="#4CAF50", fg="white", 
+                                   font=std_font, command=self._trigger_solve)
         self.btn_solve.pack(side=tk.LEFT, padx=20)
 
-        # --- PAINEL DE ESTADOS (Meio) ---
-        states_frame = tk.Frame(self.root)
-        states_frame.pack(fill=tk.BOTH, expand=True, pady=10)
+    def _trigger_solve(self):
+        # Pass the selected algorithm back to the main controller
+        self.on_solve_callback(self.algo_var.get())
 
+
+class StatesPanel(tk.Frame):
+    """Encapsulates the Initial, Goal, and Result viewers, plus step navigation."""
+    def __init__(self, parent, **kwargs):
+        super().__init__(parent, **kwargs)
+        self.solution_path = []
+        self.current_step = 0
+        self._setup_ui()
+
+    def _setup_ui(self):
         # Estado Inicial
-        frame_initial = tk.Frame(states_frame)
+        frame_initial = tk.Frame(self)
         frame_initial.pack(side=tk.LEFT, expand=True)
         tk.Label(frame_initial, text="Estado Inicial (Clique para alterar)", font=std_font).pack()
         self.cube_initial = CubeNet(frame_initial, scramble=True)
         self.cube_initial.pack(pady=10)
 
         # Estado Objetivo
-        frame_goal = tk.Frame(states_frame)
+        frame_goal = tk.Frame(self)
         frame_goal.pack(side=tk.LEFT, expand=True)
         tk.Label(frame_goal, text="Estado Objetivo", font=std_font).pack()
         self.cube_goal = CubeNet(frame_goal, editable=False)
         self.cube_goal.pack(pady=10)
 
         # Visualizador do Resultado Gráfico
-        frame_result = tk.Frame(states_frame)
+        frame_result = tk.Frame(self)
         frame_result.pack(side=tk.LEFT, expand=True)
         tk.Label(frame_result, text="Visualizador do Caminho", font=std_font).pack()
         self.cube_result = CubeNet(frame_result, editable=False)
         self.cube_result.pack(pady=10)
         
-        # Controles do visualizador
+        # Navigation
         nav_frame = tk.Frame(frame_result)
         nav_frame.pack()
         self.btn_prev = tk.Button(nav_frame, text="< Anterior", command=self.prev_step, state=tk.DISABLED)
@@ -153,19 +154,53 @@ class RubiksSolverGUI:
         self.btn_next = tk.Button(nav_frame, text="Próximo >", command=self.next_step, state=tk.DISABLED)
         self.btn_next.pack(side=tk.LEFT, padx=5)
 
-        # --- PAINEL DE RESULTADOS TEXTUAIS (Base) ---
-        results_frame = tk.Frame(self.root, padx=20, pady=10)
-        results_frame.pack(fill=tk.BOTH, expand=True)
+    def load_solution(self, path):
+        self.solution_path = path
+        self.current_step = 0
+        if self.solution_path:
+            self._update_viewer()
 
-        self.lbl_cost = tk.Label(results_frame, text="Custo do Caminho: -", font=("Arial", 11, "bold"), fg="blue")
+    def _update_viewer(self):
+        total_steps = len(self.solution_path) - 1
+        self.lbl_step.config(text=f"Passo: {self.current_step}/{total_steps}")
+        
+        current_state = self.solution_path[self.current_step]
+        # Uses BLD from the initial cube as requested
+        sticker_cube = StickersCube(cube=get_state_lup(current_state), BLD=self.cube_initial.cube.get_BLD())
+        self.cube_result.cube = sticker_cube
+        self.cube_result.draw_net()
+
+        self.btn_prev.config(state=tk.NORMAL if self.current_step > 0 else tk.DISABLED)
+        self.btn_next.config(state=tk.NORMAL if self.current_step < total_steps else tk.DISABLED)
+
+    def prev_step(self):
+        if self.current_step > 0:
+            self.current_step -= 1
+            self._update_viewer()
+
+    def next_step(self):
+        if self.current_step < len(self.solution_path) - 1:
+            self.current_step += 1
+            self._update_viewer()
+
+
+class ResultsPanel(tk.Frame):
+    """Encapsulates the textual path output, cost, and pagination logic."""
+    def __init__(self, parent, **kwargs):
+        super().__init__(parent, padx=20, pady=10, **kwargs)
+        self.full_path_str = ""
+        self.current_page = 0
+        self.chars_per_page = 380
+        self._setup_ui()
+
+    def _setup_ui(self):
+        self.lbl_cost = tk.Label(self, text="Custo do Caminho: -", font=("Arial", 11, "bold"), fg="blue")
         self.lbl_cost.pack(anchor=tk.W)
 
-        # 1. Added wrap=tk.CHAR (prevents horizontal overflow, even for long words)
-        self.txt_path = tk.Text(results_frame, height=5, width=80, state=tk.DISABLED, wrap=tk.CHAR)
+        self.txt_path = tk.Text(self, height=5, width=80, state=tk.DISABLED, wrap=tk.CHAR)
         self.txt_path.pack(fill=tk.BOTH, expand=True)
 
-        # 2. Pagination Frame & Controls
-        self.pagination_frame = tk.Frame(results_frame)
+        self.pagination_frame = tk.Frame(self)
         self.pagination_frame.pack(fill=tk.X, pady=(5, 0))
 
         self.btn_prev_page = tk.Button(self.pagination_frame, text="<< Anterior", command=self.prev_page, state=tk.DISABLED)
@@ -177,98 +212,73 @@ class RubiksSolverGUI:
         self.btn_next_page = tk.Button(self.pagination_frame, text="Próxima >>", command=self.next_page, state=tk.DISABLED)
         self.btn_next_page.pack(side=tk.RIGHT)
 
-        # 3. State variables for pagination
-        self.full_path_str = ""
+    def display_results(self, algo, cost, path_str):
+        self.lbl_cost.config(text=f"Custo do Caminho: {cost} | Algoritmo: {algo}")
+        self.full_path_str = path_str
         self.current_page = 0
-        self.chars_per_page = 380 # Slightly less than 5*80=400 to ensure no vertical overflow
+        self._update_page_view()
 
-    def solve(self):
-        """Método chamado ao clicar em Resolver. Aqui você conectará seu backend."""
-        algo = self.algo_var.get()
-
-        id_start = self.cube_initial.cube.get_cube().get_id()
-        id_goal = self.cube_goal.cube.get_cube().get_id()
-        self.solution_path = apply_algorithm(algo, id_start, id_goal)
-        
-        # SIMULAÇÃO DE RESULTADO:
-        mock_cost = len(self.solution_path) - 1
-        mock_path_str = stringify_path(self.solution_path)
-        
-        # ==========================================
-
-        # Atualizando a UI com os resultados textuais
-        self.lbl_cost.config(text=f"Custo do Caminho: {mock_cost} | Algoritmo: {algo}")
-        
-        # Save the full string to our state and reset to page 0
-        self.full_path_str = mock_path_str
-        self.current_page = 0
-
-        # Trigger the display update
-        self.update_page_view()
-
-        # Resetando o visualizador gráfico
-        self.current_step = 0
-        if self.solution_path:
-            self.update_viewer()
-
-    def update_page_view(self):
-        # Calculate total pages
+    def _update_page_view(self):
         total_len = len(self.full_path_str)
         total_pages = max(1, math.ceil(total_len / self.chars_per_page))
         
-        # Slice the string for the current page
         start_idx = self.current_page * self.chars_per_page
         end_idx = start_idx + self.chars_per_page
         page_text = self.full_path_str[start_idx:end_idx]
         
-        # Update the Text Box
         self.txt_path.config(state=tk.NORMAL)
         self.txt_path.delete(1.0, tk.END)
         self.txt_path.insert(tk.END, page_text)
         self.txt_path.config(state=tk.DISABLED)
         
-        # Update Labels and Button States
         self.lbl_page.config(text=f"Página {self.current_page + 1} de {total_pages}")
-        
-        # Disable "Prev" if on the first page
         self.btn_prev_page.config(state=tk.NORMAL if self.current_page > 0 else tk.DISABLED)
-        
-        # Disable "Next" if on the last page
         self.btn_next_page.config(state=tk.NORMAL if self.current_page < total_pages - 1 else tk.DISABLED)
 
     def prev_page(self):
         if self.current_page > 0:
             self.current_page -= 1
-            self.update_page_view()
+            self._update_page_view()
 
     def next_page(self):
         total_pages = math.ceil(len(self.full_path_str) / self.chars_per_page)
         if self.current_page < total_pages - 1:
             self.current_page += 1
-            self.update_page_view()
+            self._update_page_view()
 
-    def update_viewer(self):
-        """Atualiza o cubo do visualizador e os botões de navegação."""
-        total_steps = len(self.solution_path) - 1
-        self.lbl_step.config(text=f"Passo: {self.current_step}/{total_steps}")
+
+class RubiksSolverGUI:
+    """The Main App Controller/Mediator. Orchestrates the sub-panels."""
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Cubo Mágico 2x2x2 - Buscas em IA")
+        self.root.geometry("850x650")
         
-        current_state = self.solution_path[self.current_step]
-        sticker_cube = StickersCube(cube=get_state_lup(current_state), BLD=self.cube_initial.cube.get_BLD())
-        self.cube_result.cube = sticker_cube
-        self.cube_result.draw_net()
+        # Instantiate UI Components
+        self.control_panel = ControlPanel(self.root, on_solve_callback=self.solve)
+        self.control_panel.pack(fill=tk.X)
 
-        self.btn_prev.config(state=tk.NORMAL if self.current_step > 0 else tk.DISABLED)
-        self.btn_next.config(state=tk.NORMAL if self.current_step < total_steps else tk.DISABLED)
+        self.states_panel = StatesPanel(self.root)
+        self.states_panel.pack(fill=tk.BOTH, expand=True, pady=10)
 
-    def prev_step(self):
-        if self.current_step > 0:
-            self.current_step -= 1
-            self.update_viewer()
+        self.results_panel = ResultsPanel(self.root)
+        self.results_panel.pack(fill=tk.BOTH, expand=True)
 
-    def next_step(self):
-        if self.current_step < len(self.solution_path) - 1:
-            self.current_step += 1
-            self.update_viewer()
+    def solve(self, algo):
+        """Called by the ControlPanel when the solve button is clicked."""
+        id_start = self.states_panel.cube_initial.cube.get_cube().get_id()
+        id_goal = self.states_panel.cube_goal.cube.get_cube().get_id()
+        
+        # Backend Processing
+        solution_path = apply_algorithm(algo, id_start, id_goal)
+        
+        # Data formatting
+        mock_cost = len(solution_path) - 1
+        mock_path_str = stringify_path(solution_path)
+        
+        # Dispatch data to the presentation layer (UI components)
+        self.results_panel.display_results(algo, mock_cost, mock_path_str)
+        self.states_panel.load_solution(solution_path)
 
 if __name__ == "__main__":
     root = tk.Tk()
