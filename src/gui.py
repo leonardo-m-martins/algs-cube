@@ -4,6 +4,7 @@ from src.stickers import StickersCube, Subcubes, Colors, OFFSETS
 from src.cube import Cube, get_state_lup, grafo, nos
 from src.BuscaNP import buscaNP
 import numpy as np
+import math
 
 # Cores padrão do Cubo Mágico
 COLORS = {Colors.WHITE: 'white', Colors.RED: 'red', Colors.BLUE: 'blue', Colors.ORANGE: 'orange', Colors.GREEN: 'green', Colors.YELLOW: 'yellow'}
@@ -159,15 +160,31 @@ class RubiksSolverGUI:
         self.lbl_cost = tk.Label(results_frame, text="Custo do Caminho: -", font=("Arial", 11, "bold"), fg="blue")
         self.lbl_cost.pack(anchor=tk.W)
 
-        tk.Label(results_frame, text="Caminho Encontrado (Movimentos):").pack(anchor=tk.W, pady=(10, 0))
-        self.txt_path = tk.Text(results_frame, height=5, width=80, state=tk.DISABLED)
+        # 1. Added wrap=tk.CHAR (prevents horizontal overflow, even for long words)
+        self.txt_path = tk.Text(results_frame, height=5, width=80, state=tk.DISABLED, wrap=tk.CHAR)
         self.txt_path.pack(fill=tk.BOTH, expand=True)
+
+        # 2. Pagination Frame & Controls
+        self.pagination_frame = tk.Frame(results_frame)
+        self.pagination_frame.pack(fill=tk.X, pady=(5, 0))
+
+        self.btn_prev_page = tk.Button(self.pagination_frame, text="<< Anterior", command=self.prev_page, state=tk.DISABLED)
+        self.btn_prev_page.pack(side=tk.LEFT)
+
+        self.lbl_page = tk.Label(self.pagination_frame, text="Página 1 de 1")
+        self.lbl_page.pack(side=tk.LEFT, expand=True)
+
+        self.btn_next_page = tk.Button(self.pagination_frame, text="Próxima >>", command=self.next_page, state=tk.DISABLED)
+        self.btn_next_page.pack(side=tk.RIGHT)
+
+        # 3. State variables for pagination
+        self.full_path_str = ""
+        self.current_page = 0
+        self.chars_per_page = 380 # Slightly less than 5*80=400 to ensure no vertical overflow
 
     def solve(self):
         """Método chamado ao clicar em Resolver. Aqui você conectará seu backend."""
         algo = self.algo_var.get()
-
-        print(self.cube_initial.cube.validate_stickers())
 
         id_start = self.cube_initial.cube.get_cube().get_id()
         id_goal = self.cube_result.cube.get_cube().get_id()
@@ -182,15 +199,53 @@ class RubiksSolverGUI:
         # Atualizando a UI com os resultados textuais
         self.lbl_cost.config(text=f"Custo do Caminho: {mock_cost} | Algoritmo: {algo}")
         
-        self.txt_path.config(state=tk.NORMAL)
-        self.txt_path.delete(1.0, tk.END)
-        self.txt_path.insert(tk.END, mock_path_str)
-        self.txt_path.config(state=tk.DISABLED)
+        # Save the full string to our state and reset to page 0
+        self.full_path_str = mock_path_str
+        self.current_page = 0
+
+        # Trigger the display update
+        self.update_page_view()
 
         # Resetando o visualizador gráfico
         self.current_step = 0
         if self.solution_path:
             self.update_viewer()
+
+    def update_page_view(self):
+        # Calculate total pages
+        total_len = len(self.full_path_str)
+        total_pages = max(1, math.ceil(total_len / self.chars_per_page))
+        
+        # Slice the string for the current page
+        start_idx = self.current_page * self.chars_per_page
+        end_idx = start_idx + self.chars_per_page
+        page_text = self.full_path_str[start_idx:end_idx]
+        
+        # Update the Text Box
+        self.txt_path.config(state=tk.NORMAL)
+        self.txt_path.delete(1.0, tk.END)
+        self.txt_path.insert(tk.END, page_text)
+        self.txt_path.config(state=tk.DISABLED)
+        
+        # Update Labels and Button States
+        self.lbl_page.config(text=f"Página {self.current_page + 1} de {total_pages}")
+        
+        # Disable "Prev" if on the first page
+        self.btn_prev_page.config(state=tk.NORMAL if self.current_page > 0 else tk.DISABLED)
+        
+        # Disable "Next" if on the last page
+        self.btn_next_page.config(state=tk.NORMAL if self.current_page < total_pages - 1 else tk.DISABLED)
+
+    def prev_page(self):
+        if self.current_page > 0:
+            self.current_page -= 1
+            self.update_page_view()
+
+    def next_page(self):
+        total_pages = math.ceil(len(self.full_path_str) / self.chars_per_page)
+        if self.current_page < total_pages - 1:
+            self.current_page += 1
+            self.update_page_view()
 
     def update_viewer(self):
         """Atualiza o cubo do visualizador e os botões de navegação."""
