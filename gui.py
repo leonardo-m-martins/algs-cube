@@ -3,12 +3,22 @@ from tkinter import ttk
 from stickers import StickersCube, Subcubes, Colors, OFFSETS
 from cube import Cube, get_state_lup, grafo, nos
 from algoritmos.BuscaNP import buscaNP
+import numpy as np
 
 # Cores padrão do Cubo Mágico
 COLORS = {Colors.WHITE: 'white', Colors.RED: 'red', Colors.BLUE: 'blue', Colors.ORANGE: 'orange', Colors.GREEN: 'green', Colors.YELLOW: 'yellow'}
 COLORS_REVERSED_MAP = {value: key for key, value in COLORS.items()}
 
 busca = buscaNP()
+
+def stringify_path(path: list) -> str:
+    MOVE_NAMES = ['U', 'U2', 'U\'', 'R', 'R2', 'R\'', 'F', 'F2', 'F\'']
+    moves = []
+    for i in range(len(path) - 1):
+        move_idx = np.where(grafo[path[i]] == path[i+1])[0][0]
+        moves.append(MOVE_NAMES[move_idx])
+    return ' '.join(moves)
+
 
 def apply_algorithm(algo: str, initial, objective):
     algos = ('Amplitude', 'Profundidade', 'Profundidade Limitada', 
@@ -164,8 +174,8 @@ class RubiksSolverGUI:
         self.solution_path = apply_algorithm(algo, id_start, id_goal)
         
         # SIMULAÇÃO DE RESULTADO:
-        mock_cost = len(self.solution_path)
-        mock_path_str = "sdfgjkl"
+        mock_cost = len(self.solution_path) - 1
+        mock_path_str = stringify_path(self.solution_path)
         
         # ==========================================
 
