@@ -40,13 +40,68 @@ def apply_algorithm(algo: str, initial, objective):
 
 std_font = ("Arial", 10, "bold")
 
+class ColorSelector(tk.Frame):
+    """A reusable widget containing 6 color blocks that map to values 0-5."""
+    def __init__(self, parent, on_select_callback=None, **kwargs):
+        super().__init__(parent, **kwargs)
+        
+        # Callback to notify the parent when a color is picked
+        self.on_select_callback = on_select_callback
+        
+        # Attribute to store the number (0 to 5)
+        self.selected_value = None
+        
+        # Keep track of the button widgets to update their states
+        self.buttons = [None for _ in range(len(COLORS))]
+        
+        self._setup_ui()
+
+    def _setup_ui(self):
+        for i, color in COLORS.items():
+            # Create the button. 
+            # We use a lambda with a default argument (idx=i) to capture the correct index for each button.
+            btn = tk.Button(
+                self, 
+                bg=color, 
+                activebackground=color, # Keep the color same when clicked
+                width=4, 
+                height=2, 
+                relief=tk.RAISED,
+                command=lambda idx=i: self._select_color(idx)
+            )
+            btn.pack(side=tk.LEFT, padx=5, pady=5)
+            self.buttons[i] = btn
+
+        self._select_color(0)
+
+    def _select_color(self, index):
+        """Handles the logic when a color button is clicked."""
+        
+        # 1. Reset all buttons to their default state (clickable and raised)
+        for btn in self.buttons:
+            btn.config(state=tk.NORMAL, relief=tk.RAISED, borderwidth=2)
+            
+        # 2. Highlight the selected button (make it sunken, thicker border, and disable it)
+        selected_btn = self.buttons[index]
+        selected_btn.config(state=tk.DISABLED, relief=tk.SUNKEN, borderwidth=4)
+        
+        # 3. Save the index (0 to 5) to the attribute
+        self.selected_value = index
+        
+        # 4. If a callback was provided, send the chosen number back to the parent
+        if self.on_select_callback:
+            self.on_select_callback(self.selected_value)
+
+
 class CubeNet(tk.Canvas):
     """Componente gráfico que desenha a planificação de um cubo 2x2x2."""
-    def __init__(self, master, sticker_size=30, editable=True, cube: StickersCube=None, **kwargs):
+    def __init__(self, master, color_selector: ColorSelector, sticker_size=30, editable=True, cube: StickersCube=None, **kwargs):
         super().__init__(master, width=sticker_size*8, height=sticker_size*6, bg='#f0f0f0', highlightthickness=0, **kwargs)
         self.size = sticker_size
         self.editable = editable
         self.stickers = {} # Armazena os IDs dos retângulos
+        self.color_selector = color_selector
+
         if cube:
             self.cube = cube
         else:
@@ -74,12 +129,11 @@ class CubeNet(tk.Canvas):
                 self.stickers[rect_id] = (key, i % 3)
             
 
-    def on_click(self):
+    def on_click(self, event):
         item = self.find_withtag("current")
         if item:
             rect_id = item[0]
-            current_color = self.itemcget(rect_id, "fill")
-            next_color_idx = (COLORS_REVERSED_MAP[current_color] + 1) % len(COLORS)
+            next_color_idx = self.color_selector.selected_value
             next_color = COLORS[next_color_idx]
             self.itemconfig(rect_id, fill=next_color)
             key, idx = self.stickers[rect_id]
@@ -114,13 +168,13 @@ class ControlPanel(tk.Frame):
 
 class StatesPanel(tk.Frame):
     """Encapsulates the Initial, Goal, and Result viewers, plus step navigation."""
-    def __init__(self, parent, **kwargs):
+    def __init__(self, parent, color_selector: ColorSelector, **kwargs):
         super().__init__(parent, **kwargs)
         self.solution_path = []
         self.current_step = 0
-        self._setup_ui()
+        self._setup_ui(color_selector)
 
-    def _setup_ui(self):
+    def _setup_ui(self, color_selector: ColorSelector):
         # Instead of packing the whole self, we'll use grid inside it
         # Configure columns to distribute weight evenly
         for i in range(3):
@@ -134,19 +188,19 @@ class StatesPanel(tk.Frame):
         # Estado Inicial
         lbl_initial = tk.Label(self, text="Estado Inicial (Clique para alterar)", font=std_font)
         lbl_initial.grid(row=0, column=0, sticky="s")
-        self.cube_initial = CubeNet(self)
+        self.cube_initial = CubeNet(self, color_selector)
         self.cube_initial.grid(row=1, column=0, padx=10, pady=10, sticky="n")
 
         # Estado Objetivo
         lbl_goal = tk.Label(self, text="Estado Objetivo", font=std_font)
         lbl_goal.grid(row=0, column=1, sticky="s")
-        self.cube_goal = CubeNet(self, editable=False)
+        self.cube_goal = CubeNet(self, color_selector)
         self.cube_goal.grid(row=1, column=1, padx=10, pady=10, sticky="n")
 
         # Visualizador do Resultado Gráfico
         lbl_result = tk.Label(self, text="Visualizador do Caminho", font=std_font)
         lbl_result.grid(row=0, column=2, sticky="s")
-        self.cube_result = CubeNet(self, editable=False)
+        self.cube_result = CubeNet(self, color_selector, editable=False)
         self.cube_result.grid(row=1, column=2, padx=10, pady=10, sticky="n")
 
         # --- ROW 2: Nav, buttons ---
@@ -280,8 +334,12 @@ class RubiksSolverGUI:
         self.control_panel = ControlPanel(self.root, on_solve_callback=self.solve)
         self.control_panel.pack(fill=tk.X)
 
-        self.states_panel = StatesPanel(self.root)
+        self.color_selector = ColorSelector(self.root)
+
+        self.states_panel = StatesPanel(self.root, self.color_selector)
         self.states_panel.pack(fill=tk.BOTH, expand=True, pady=10)
+        
+        self.color_selector.pack()
 
         self.results_panel = ResultsPanel(self.root)
         self.results_panel.pack(fill=tk.BOTH, expand=True)
