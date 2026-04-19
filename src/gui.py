@@ -187,7 +187,7 @@ class RubiksSolverGUI:
         algo = self.algo_var.get()
 
         id_start = self.cube_initial.cube.get_cube().get_id()
-        id_goal = self.cube_result.cube.get_cube().get_id()
+        id_goal = self.cube_goal.cube.get_cube().get_id()
         self.solution_path = apply_algorithm(algo, id_start, id_goal)
         
         # SIMULAÇÃO DE RESULTADO:
