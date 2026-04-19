@@ -8,12 +8,12 @@ import numpy as np
 
 # Colors enum
 class Colors:
-    WHITE = 0 
+    RED = 0
     BLUE = 1
-    ORANGE = 2
-    YELLOW = 3
+    YELLOW = 2
+    ORANGE = 3
     GREEN = 4
-    RED = 5
+    WHITE = 5
 
 # Subcubes enum
 class Subcubes:
@@ -41,28 +41,6 @@ STICKER_COMBINATIONS = (
     {Colors.YELLOW, Colors.BLUE, Colors.ORANGE}
 )
 
-ori_fb_ud = {
-    Subcubes.FRU: 2,
-    Subcubes.FRD: 2,
-    Subcubes.FLU: 1,
-    Subcubes.FLD: 1,
-    Subcubes.BRU: 2,
-    Subcubes.BRD: 1,
-    Subcubes.BLU: 1,
-    Subcubes.BLD: 2
-}
-
-ori_rl_ud = {
-    Subcubes.FRU: 1,
-    Subcubes.FRD: 1,
-    Subcubes.FLU: 2,
-    Subcubes.FLD: 2,
-    Subcubes.BRU: 1,
-    Subcubes.BRD: 2,
-    Subcubes.BLU: 2,
-    Subcubes.BLD: 1
-}
-
 def create_ori_stickers_array():
     p012 = (0, 1, 2)
     p021 = (0, 2, 1)
@@ -83,20 +61,20 @@ def create_ori_stickers_array():
     )
 
     FLU = (
-        (p012, p201, p120),
+        (p012, p120, p201),
         (p102, p021, p210),
         (p102, p021, p210),
         (p012, p120, p201),
-        (p012, p120, p201),
+        (p102, p021, p210),
         (p012, p120, p201),
         (p102, p021, p210),
         (p012, p012, p012)
     )
 
     FRD = (
-        (p012, p201, p120),
+        (p012, p120, p201),
         (p102, p021, p210),
-        (p102, p210, p021),
+        (p102, p021, p210),
         (p012, p201, p120),
         (p102, p021, p210),
         (p012, p120, p201),
@@ -181,7 +159,7 @@ def hash_colors(colors: list):
 
 class StickersCube:
     state: dict
-    
+
     def __init__(self, state: dict=None, BLD: list=None, cube: Cube=None):
         if state != None:
             self.state = state
@@ -261,19 +239,14 @@ class StickersCube:
 
         for subcube, colors in self.state.items():
             # Perm
-            cube_state[subcube] = goals[hash_colors(colors)]
-            
+            goal = goals[hash_colors(colors)]
+            cube_state[subcube] = goal
 
             # Ori
-            # Ori correta
-            if colors[2] == u or colors[2] == d:
-                cube_state[subcube + 8] = 0
-            # F ou B em U ou D
-            elif colors[2] == f or colors[2] == b:
-                cube_state[subcube + 8] = ori_fb_ud[subcube]
-            # R ou L em U ou D
-            elif colors[2] == r or colors[2] == l:
-                cube_state[subcube + 8] = ori_rl_ud[subcube]
+            current_ori_pattern = tuple(np.array(colors) % 3)
+            available_patterns = [tuple(row) for row in ori_stickers[subcube, goal]]
+            
+            cube_state[subcube + 8] = available_patterns.index(current_ori_pattern)
 
         return Cube(cube_state)
     
