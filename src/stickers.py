@@ -1,4 +1,4 @@
-from cube import Cube
+from src.cube import Cube
 from copy import deepcopy
 import numpy as np
 
@@ -180,6 +180,8 @@ def hash_colors(colors: list):
     return colors[0] * 36 + colors[1] * 6 + colors[2]
 
 class StickersCube:
+    state: dict
+    
     def __init__(self, state: dict=None, BLD: list=None, cube: Cube=None):
         if state != None:
             self.state = state

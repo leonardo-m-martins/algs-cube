@@ -1,8 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
-from stickers import StickersCube, Subcubes, Colors, OFFSETS
-from cube import Cube, get_state_lup, grafo, nos
-from algoritmos.BuscaNP import buscaNP
+from src.stickers import StickersCube, Subcubes, Colors, OFFSETS
+from src.cube import Cube, get_state_lup, grafo, nos
+from src.BuscaNP import buscaNP
 import numpy as np
 
 # Cores padrão do Cubo Mágico
@@ -33,7 +33,7 @@ def apply_algorithm(algo: str, initial, objective):
     if algo == algos[3]:
         return busca.aprof_iterativo_grafo(initial, objective, nos, grafo, 14)
     if algo == algos[4]:
-        return busca.bidirecional(initial, objective, nos, grafo)
+        return busca.bidirecional_grafo(initial, objective, nos, grafo)
     else: 
         raise Exception("Não implementado")
 

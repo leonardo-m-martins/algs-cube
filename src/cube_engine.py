@@ -5,8 +5,8 @@ global perm_moves, ori_moves, TOTAL_STATES, MOVE_NUMBER
 
 TOTAL_STATES = 3674160
 MOVE_NUMBER = 9
-perm_moves = np.load("perm_moves.npy", "r").astype(np.uint32)
-ori_moves = np.load("ori_moves.npy", "r").astype(np.uint32)
+perm_moves = np.load("data/perm_moves.npy", "r").astype(np.uint32)
+ori_moves = np.load("data/ori_moves.npy", "r").astype(np.uint32)
 
 def generate_cubes() -> np.ndarray:
     grafo = np.empty((TOTAL_STATES, MOVE_NUMBER), dtype=np.uint32)

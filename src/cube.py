@@ -1,5 +1,5 @@
 import numpy as np
-from cube_engine import generate_cubes, get_heuristic
+from src.cube_engine import generate_cubes, get_heuristic
 import random as rd
 
 """
