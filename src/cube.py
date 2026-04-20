@@ -216,6 +216,9 @@ class Cube:
         for _ in range(100):
             self.move_inplace(rd.choice(MOVES))
 
+    def validate_ori(self) -> bool:
+        return sum(self.state[8:]) % 3 == 0
+
     def __eq__(self, value):
         return type(value) == type(self) and hash(self) == hash(value)
 

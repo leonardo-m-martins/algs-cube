@@ -175,6 +175,8 @@ class StatesPanel(tk.Frame):
         self._setup_ui(color_selector)
 
     def _setup_ui(self, color_selector: ColorSelector):
+        self.alert_banner = AlertBanner(self)
+
         # Instead of packing the whole self, we'll use grid inside it
         # Configure columns to distribute weight evenly
         for i in range(3):
@@ -205,11 +207,23 @@ class StatesPanel(tk.Frame):
 
         # --- ROW 2: Nav, buttons ---
 
-        self.scramble_btn_initial = tk.Button(self, text="Embaralhar", command=lambda net=self.cube_initial: self.scramble(cubeNet=net))
-        self.scramble_btn_initial.grid(row=2, column=0, sticky="n")
+        self.btns_frame_1 = tk.Frame(self)
+        self.btns_frame_1.grid(row=2, column=0, sticky="n")
 
-        self.scramble_btn_goal = tk.Button(self, text="Embaralhar", command=lambda net=self.cube_goal: self.scramble(cubeNet=net))
-        self.scramble_btn_goal.grid(row=2, column=1, sticky="n")
+        self.scramble_btn_initial = tk.Button(self.btns_frame_1, text="Embaralhar", command=lambda net=self.cube_initial: self.scramble(cubeNet=net))
+        self.scramble_btn_initial.pack(side="left")
+
+        self.reset_btn_initial = tk.Button(self.btns_frame_1, text="Resetar", command=lambda net=self.cube_initial: self.reset_cube(cubeNet=net))
+        self.reset_btn_initial.pack(side="left")
+
+        self.btns_frame_2 = tk.Frame(self)
+        self.btns_frame_2.grid(row=2, column=1, sticky="n")
+
+        self.scramble_btn_goal = tk.Button(self.btns_frame_2, text="Embaralhar", command=lambda net=self.cube_goal: self.scramble(cubeNet=net))
+        self.scramble_btn_goal.pack(side="left")
+
+        self.reset_btn_goal = tk.Button(self.btns_frame_2, text="Resetar", command=lambda net=self.cube_goal: self.reset_cube(cubeNet=net))
+        self.reset_btn_goal.pack(side="left")
 
         nav_frame = tk.Frame(self)
         nav_frame.grid(row=2, column=2, sticky="n")
@@ -248,6 +262,24 @@ class StatesPanel(tk.Frame):
     def scramble(self, cubeNet: CubeNet):
         cubeNet.cube.scramble()
         cubeNet.draw_net()
+
+    def reset_cube(self, cubeNet: CubeNet):
+        cubeNet.cube = StickersCube()
+        cubeNet.draw_net()
+
+    def validate_cube(self, name: str, cube: StickersCube) -> bool:
+        if not cube.validate_stickers():
+            self.alert_banner.show(f"{name} inválido: arranjo de stickers inválido")
+            return False
+        try:
+            cube_arr = cube.get_cube()
+        except:
+            self.alert_banner.show(f"{name} inválido: Orientação inválida")
+            return False
+        if not cube_arr.validate_ori():
+            self.alert_banner.show(f"{name} inválido: Orientação inválida")
+            return False
+        return True
 
     def prev_step(self):
         if self.current_step > 0:
@@ -322,6 +354,50 @@ class ResultsPanel(tk.Frame):
             self.current_page += 1
             self._update_page_view()
 
+class AlertBanner(tk.Frame):
+    """A floating notification banner for errors or success messages."""
+    def __init__(self, parent, **kwargs):
+        # We use a solid red background for errors by default
+        super().__init__(parent, bg="#f44336", bd=2, relief=tk.RAISED, **kwargs)
+        
+        # The label that holds the actual text
+        self.lbl_message = tk.Label(self, text="", bg="#f44336", fg="white", font=std_font)
+        self.lbl_message.pack(side=tk.LEFT, padx=(15, 5), pady=5)
+        
+        # A manual close button just in case the user doesn't want to wait
+        self.btn_close = tk.Button(self, text="✖", bg="#f44336", fg="white", bd=0, 
+                                   activebackground="#d32f2f", activeforeground="white", 
+                                   command=self.hide)
+        self.btn_close.pack(side=tk.RIGHT, padx=(5, 10), pady=5)
+
+        # Store the timer ID so we can cancel it if a new message appears quickly
+        self._timer_id = None
+
+    def show(self, message, duration_ms=3000, is_error=True):
+        """Displays the banner with the message."""
+        # Cancel any existing auto-hide timer if we are showing a new message
+        if self._timer_id is not None:
+            self.after_cancel(self._timer_id)
+
+        # Change colors based on whether it's an error or success
+        bg_color = "#f44336" if is_error else "#4CAF50" # Red for error, Green for success
+        self.config(bg=bg_color)
+        self.lbl_message.config(text=message, bg=bg_color)
+        self.btn_close.config(bg=bg_color, activebackground=bg_color)
+
+        # Place the banner floating near the top center of the parent window.
+        # relx=0.5 puts the center of the widget exactly in the middle of the screen.
+        self.place(relx=0.5, rely=0, anchor=tk.N)
+        self.lift()
+
+        # Automatically hide it after 'duration_ms' milliseconds
+        if duration_ms > 0:
+            self._timer_id = self.after(duration_ms, self.hide)
+
+    def hide(self):
+        """Removes the banner from the screen."""
+        self.place_forget()
+        self._timer_id = None
 
 class RubiksSolverGUI:
     """The Main App Controller/Mediator. Orchestrates the sub-panels."""
@@ -346,8 +422,20 @@ class RubiksSolverGUI:
 
     def solve(self, algo):
         """Called by the ControlPanel when the solve button is clicked."""
-        id_start = self.states_panel.cube_initial.cube.get_cube().get_id()
-        goal_sticker_cube = self.states_panel.cube_goal.cube.copy_match_BLD(self.states_panel.cube_initial.cube.get_BLD())
+        start_sticker_cube = self.states_panel.cube_initial.cube
+        goal_sticker_cube = self.states_panel.cube_goal.cube
+
+        if not self.states_panel.validate_cube("Estado Inicial", start_sticker_cube):
+            return
+        if not self.states_panel.validate_cube("Estado Objetivo", goal_sticker_cube):
+            return
+        
+        goal_sticker_cube = goal_sticker_cube.copy_match_BLD(start_sticker_cube.get_BLD())
+
+        if not self.states_panel.validate_cube("Estado Objetivo", goal_sticker_cube):
+            return
+
+        id_start = start_sticker_cube.get_cube().get_id()
         id_goal = goal_sticker_cube.get_cube().get_id()
         
         # Backend Processing
