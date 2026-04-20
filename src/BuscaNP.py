@@ -1,7 +1,7 @@
 from collections import deque
 from src.Node import Node
 import numpy as np
-from numba import njit, uint32, typed, types
+from numba import njit, uint32, int32, typed, types
 
 caminho_type = types.ListType(types.uint32)
 
@@ -104,7 +104,7 @@ def profundidade_grafo(inicio, fim, grafo):
 #--------------------------------------------------------------------------
 # BUSCA EM PROFUNDIDADE LIMITADA - GRAFO
 #--------------------------------------------------------------------------
-@njit(caminho_type(uint32, uint32, uint32[:, ::1], uint32))
+@njit(caminho_type(uint32, uint32, uint32[:, ::1], int32))
 def prof_limitada_grafo(inicio,fim,grafo,lim):
     if inicio == fim:
         caminho = typed.List.empty_list(types.uint32)
