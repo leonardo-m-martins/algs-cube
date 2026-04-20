@@ -47,10 +47,10 @@ def apply_algorithm(algo: str, initial, objective, lim: int=14, weights: tuple=N
         return p_busca.custo_uniforme_grafo(initial, objective, nos, grafo, weights)
     elif algo == algos[6]:
         return p_busca.greedy_grafo(initial, objective, nos, grafo, weights, heuristic)
-    # elif algo == algos[7]:
-    #     return p_busca.a_estrela_grafo(initial, objective, nos, grafo, weights)
-    # elif algo == algos[8]:
-    #     return p_busca.aia_estrela_grafo(initial, objective, nos, grafo, weights)
+    elif algo == algos[7]:
+        return p_busca.a_estrela_grafo(initial, objective, nos, grafo, weights, heuristic)
+    elif algo == algos[8]:
+        return p_busca.aia_estrela_grafo(initial, objective, nos, grafo, weights, heuristic)
     else: 
         raise Exception("Não implementado")
 

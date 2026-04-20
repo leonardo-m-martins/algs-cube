@@ -149,13 +149,13 @@ class buscaP(object):
 # A ESTRELA - GRAFO
 # -----------------------------------------------------------------------------
 # Alterações: adicionado um parâmetro "pesos" em que é passado o custo de cada movimento
-    def a_estrela_grafo(self,inicio,fim,nos,grafo,pesos):
+    def a_estrela_grafo(self,inicio,fim,nos,grafo,pesos,heuristica):
         # Origem igual a destino
         if inicio == fim:
             return [inicio], 0
         
         # Fila de prioridade baseada em deque + inserção ordenada
-        lista = deque()
+        lista = list()
         raiz = NodeP(None, inicio, 0, None, None, 0)
         lista.append(raiz)
     
@@ -165,7 +165,7 @@ class buscaP(object):
         # loop de busca
         while lista:
             # remove o primeiro nó
-            atual = lista.popleft()
+            atual = heapq.heappop(lista)
             valor_atual = atual.v2
     
             # Chegou ao objetivo
@@ -179,7 +179,7 @@ class buscaP(object):
             for novo in filhos:
                 # custo acumulado até o sucessor
                 v2 = valor_atual + novo[1]
-                v1 = v2 + self.heuristica_grafo(nos,novo[0],fim)  
+                v1 = v2 + heuristica[novo[0]]
     
                 # Não visitado ou custo melhor
                 if (novo[0] not in visitado) or (v2 < visitado[novo[0]].v2):
@@ -191,15 +191,15 @@ class buscaP(object):
 # AIA ESTRELA - GRAFO
 # -----------------------------------------------------------------------------
 # Alterações: adicionado um parâmetro "pesos" em que é passado o custo de cada movimento
-    def aia_estrela_grafo(self,inicio,fim,nos,grafo,pesos):
-        lim = self.heuristica_grafo(nos,inicio,fim)
+    def aia_estrela_grafo(self,inicio,fim,nos,grafo,pesos,heuristica):
+        lim = int(heuristica[inicio])
         # Origem igual a destino
         if inicio == fim:
             return [inicio], 0
         
         while True:
             # Fila de prioridade baseada em deque + inserção ordenada
-            lista = deque()
+            lista = list()
             raiz = NodeP(None, inicio, 0, None, None, 0)
             lista.append(raiz)
         
@@ -210,7 +210,7 @@ class buscaP(object):
             novo_lim = []
             while lista:
                 # remove o primeiro nó
-                atual = lista.popleft()
+                atual = heapq.heappop(lista)
                 valor_atual = atual.v2
         
                 # Chegou ao objetivo
@@ -224,7 +224,7 @@ class buscaP(object):
                 for novo in filhos:
                     # custo acumulado até o sucessor
                     v2 = valor_atual + novo[1]
-                    v1 = v2 + self.heuristica_grafo(nos,novo[0],fim)
+                    v1 = v2 + heuristica[novo[0]]
                     
                     if v1<=lim:
                         # Não visitado ou custo melhor
@@ -233,7 +233,7 @@ class buscaP(object):
                             visitado[novo[0]] = filho
                             self.inserir_ordenado(lista, filho)
                     else:
-                        novo_lim.append(v1)
+                        novo_lim.append(int(v1))
             lim = (int)(sum(novo_lim)/(len(novo_lim)))
             lista.clear()
             visitado.clear()
