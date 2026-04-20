@@ -1,27 +1,26 @@
 from collections import deque
 from src.NodeP import NodeP
 from math import sqrt, fabs
+import heapq
 
 class buscaP(object):
 #--------------------------------------------------------------------------
 # SUCESSORES PARA GRAFO
 #--------------------------------------------------------------------------
-    def sucessores_grafo(self,ind,grafo,ordem):
+# Alterações: adicionado um parâmetro "pesos" em que é passado o custo de cada movimento
+#             removido o parâmetro "ordem", que é sempre um nesse arquivo
+    def sucessores_grafo(self,ind,grafo,pesos):
         
         f = []
-        for suc in grafo[ind][::ordem]:
-            f.append(suc)
+        for i in range(len(grafo[ind])):
+            f.append((grafo[ind][i], pesos[i]))
         return f
 #--------------------------------------------------------------------------    
 # INSERE NA LISTA MANTENDO-A ORDENADA
 #--------------------------------------------------------------------------    
+# Alterações: alterado de inserção individual para uma heapq para performance
     def inserir_ordenado(self,lista, no):
-        for i, n in enumerate(lista):
-            if no.v1 < n.v1:
-                lista.insert(i, no)
-                break
-        else:
-            lista.append(no)
+        heapq.heappush(lista, no)
 #--------------------------------------------------------------------------    
 # EXIBE O CAMINHO ENCONTRADO NA ÁRVORE DE BUSCA
 #--------------------------------------------------------------------------    
@@ -64,13 +63,14 @@ class buscaP(object):
 # -----------------------------------------------------------------------------
 # CUSTO UNIFORME - GRAFO
 # -----------------------------------------------------------------------------
-    def custo_uniforme_grafo(self,inicio,fim,nos,grafo):
+# Alterações: adicionado um parâmetro "pesos" em que é passado o custo de cada movimento
+    def custo_uniforme_grafo(self,inicio,fim,nos,grafo,pesos):
         # Origem igual a destino
         if inicio == fim:
             return [inicio], 0
         
         # Fila de prioridade baseada em deque + inserção ordenada
-        lista = deque()
+        lista = list()
         raiz = NodeP(None, inicio, 0, None, None, 0)
         lista.append(raiz)
     
@@ -80,16 +80,18 @@ class buscaP(object):
         # loop de busca
         while lista:
             # remove o primeiro nó
-            atual = lista.popleft()
+            atual = heapq.heappop(lista)
             valor_atual = atual.v2
     
             # Chegou ao objetivo
             if atual.estado == fim:
-                return self.exibirCaminho(atual), atual.v2
+                caminho = self.exibirCaminho(atual)
+                caminho.reverse()
+                return caminho, atual.v2
     
             # Gera sucessores - grafo
             ind = nos.index(atual.estado)
-            filhos = self.sucessores_grafo(ind, grafo, 1)
+            filhos = self.sucessores_grafo(ind, grafo, pesos)
             
             for novo in filhos:
                 # custo acumulado até o sucessor
@@ -105,7 +107,8 @@ class buscaP(object):
 # -----------------------------------------------------------------------------
 # GREEDY - GRAFO
 # -----------------------------------------------------------------------------
-    def greedy_grafo(self,inicio,fim,nos,grafo):
+# Alterações: adicionado um parâmetro "pesos" em que é passado o custo de cada movimento
+    def greedy_grafo(self,inicio,fim,nos,grafo,pesos):
         # Origem igual a destino
         if inicio == fim:
             return [inicio], 0
@@ -130,7 +133,7 @@ class buscaP(object):
     
             # Gera sucessores
             ind = nos.index(atual.estado)
-            filhos = self.sucessores_grafo(ind, grafo, 1)
+            filhos = self.sucessores_grafo(ind, grafo, pesos)
     
             for novo in filhos:
                 # custo acumulado até o sucessor
@@ -146,7 +149,8 @@ class buscaP(object):
 # -----------------------------------------------------------------------------
 # A ESTRELA - GRAFO
 # -----------------------------------------------------------------------------
-    def a_estrela_grafo(self,inicio,fim,nos,grafo):
+# Alterações: adicionado um parâmetro "pesos" em que é passado o custo de cada movimento
+    def a_estrela_grafo(self,inicio,fim,nos,grafo,pesos):
         # Origem igual a destino
         if inicio == fim:
             return [inicio], 0
@@ -171,7 +175,7 @@ class buscaP(object):
     
             # Gera sucessores
             ind = nos.index(atual.estado)
-            filhos = self.sucessores_grafo(ind, grafo, 1)
+            filhos = self.sucessores_grafo(ind, grafo, pesos)
     
             for novo in filhos:
                 # custo acumulado até o sucessor
@@ -187,7 +191,8 @@ class buscaP(object):
 # -----------------------------------------------------------------------------
 # AIA ESTRELA - GRAFO
 # -----------------------------------------------------------------------------
-    def aia_estrela_grafo(self,inicio,fim,nos,grafo):
+# Alterações: adicionado um parâmetro "pesos" em que é passado o custo de cada movimento
+    def aia_estrela_grafo(self,inicio,fim,nos,grafo,pesos):
         lim = self.heuristica_grafo(nos,inicio,fim)
         # Origem igual a destino
         if inicio == fim:
@@ -215,7 +220,7 @@ class buscaP(object):
         
                 # Gera sucessores
                 ind = nos.index(atual.estado)
-                filhos = self.sucessores_grafo(ind, grafo, 1)
+                filhos = self.sucessores_grafo(ind, grafo, pesos)
         
                 for novo in filhos:
                     # custo acumulado até o sucessor
@@ -239,7 +244,8 @@ class buscaP(object):
 # -----------------------------------------------------------------------------
 # A ESTRELA MULTI
 # -----------------------------------------------------------------------------
-    def a_estrela_multi(self,inicio,fim,nos,grafo,):
+# Alterações: adicionado um parâmetro "pesos" em que é passado o custo de cada movimento
+    def a_estrela_multi(self,inicio,fim,nos,grafo,pesos):
         
         # Fila de prioridade baseada em deque + inserção ordenada
         caminho = []
@@ -280,7 +286,7 @@ class buscaP(object):
         
                 # Gera sucessores - grafo
                 ind = nos.index(atual.estado)
-                filhos = self.sucessores_grafo(ind, grafo, 1)
+                filhos = self.sucessores_grafo(ind, grafo, pesos)
                 
                 for novo in filhos: # grafo
                     # custo acumulado até o sucessor

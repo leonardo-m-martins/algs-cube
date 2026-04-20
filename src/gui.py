@@ -1,8 +1,9 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 from src.stickers import StickersCube, Subcubes, Colors, OFFSETS
 from src.cube import Cube, get_state_lup, grafo, nos
 from src.BuscaNP import buscaNP
+from src.BuscaP import buscaP
 import numpy as np
 import math
 
@@ -10,10 +11,12 @@ import math
 COLORS = {Colors.WHITE: 'white', Colors.RED: 'red', Colors.BLUE: 'blue', Colors.ORANGE: 'orange', Colors.GREEN: 'green', Colors.YELLOW: 'yellow'}
 COLORS_REVERSED_MAP = {value: key for key, value in COLORS.items()}
 
+MOVE_NAMES = ['U', 'U2', 'U3', 'R', 'R2', 'R3', 'F', 'F2', 'F3']
+
 busca = buscaNP()
+p_busca = buscaP()
 
 def stringify_path(path: list) -> str:
-    MOVE_NAMES = ['U', 'U2', 'U\'', 'R', 'R2', 'R\'', 'F', 'F2', 'F\'']
     moves = []
     for i in range(len(path) - 1):
         move_idx = np.where(grafo[path[i]] == path[i+1])[0][0]
@@ -21,20 +24,33 @@ def stringify_path(path: list) -> str:
     return ' '.join(moves)
 
 
-def apply_algorithm(algo: str, initial, objective):
+def apply_algorithm(algo: str, initial, objective, lim: int=14, weights: tuple=None):
     algos = ('Amplitude', 'Profundidade', 'Profundidade Limitada', 
              'Aprofundamento Iterativo', 'Bidirecional', 'Custo Uniforme', 
              'Greedy', 'A*', 'IDA* (AIA)')
     if algo == algos[0]:
-        return busca.amplitude_grafo(initial, objective, nos=nos, grafo=grafo)
-    if algo == algos[1]:
-        return busca.profundidade_grafo(initial, objective, nos, grafo)
-    if algo == algos[2]:
-        return busca.prof_limitada_grafo(initial, objective, nos, grafo, 14)
-    if algo == algos[3]:
-        return busca.aprof_iterativo_grafo(initial, objective, nos, grafo, 14)
-    if algo == algos[4]:
-        return busca.bidirecional_grafo(initial, objective, nos, grafo)
+        caminho = busca.amplitude_grafo(initial, objective, nos=nos, grafo=grafo)
+        return caminho, len(caminho) - 1
+    elif algo == algos[1]:
+        caminho = busca.profundidade_grafo(initial, objective, nos, grafo)
+        return caminho, len(caminho) - 1
+    elif algo == algos[2]:
+        caminho = busca.prof_limitada_grafo(initial, objective, nos, grafo, lim)
+        return caminho, len(caminho) - 1
+    elif algo == algos[3]:
+        caminho = busca.aprof_iterativo_grafo(initial, objective, nos, grafo, lim)
+        return caminho, len(caminho) - 1
+    elif algo == algos[4]:
+        caminho = busca.bidirecional_grafo(initial, objective, nos, grafo)
+        return caminho, len(caminho) - 1
+    elif algo == algos[5]:
+        return p_busca.custo_uniforme_grafo(initial, objective, nos, grafo, weights)
+    # elif algo == algos[6]:
+    #     return p_busca.greedy_grafo(initial, objective, nos, grafo, weights)
+    # elif algo == algos[7]:
+    #     return p_busca.a_estrela_grafo(initial, objective, nos, grafo, weights)
+    # elif algo == algos[8]:
+    #     return p_busca.aia_estrela_grafo(initial, objective, nos, grafo, weights)
     else: 
         raise Exception("Não implementado")
 
@@ -139,31 +155,137 @@ class CubeNet(tk.Canvas):
             key, idx = self.stickers[rect_id]
             self.cube.state[key][idx] = next_color_idx
 
+class LimParam(tk.Frame):
+    """Component for single integer input (Depth Limit)."""
+    def __init__(self, parent, **kwargs):
+        super().__init__(parent, **kwargs)
+        
+        tk.Label(self, text="Limite Máx:", font=std_font).pack(side=tk.LEFT, padx=(5, 2))
+        
+        self.val_var = tk.IntVar(value=10)
+        self.spin = tk.Spinbox(self, from_=1, to=100, textvariable=self.val_var, width=5, font=std_font)
+        self.spin.pack(side=tk.LEFT)
+
+    def get(self):
+        try:
+            return self.val_var.get()
+        except tk.TclError:
+            raise ValueError("O limite deve ser um número inteiro válido.")
+
+
+class WeightsParam(tk.Frame):
+    """Component for 9 integer inputs arranged in a compact grid."""
+    def __init__(self, parent, **kwargs):
+        super().__init__(parent, **kwargs)
+        
+        tk.Label(self, text="Pesos:", font=std_font).pack(side=tk.LEFT, padx=(5, 10))
+        
+        # We use an internal frame to grid the 9 inputs neatly
+        self.grid_frame = tk.Frame(self)
+        self.grid_frame.pack(side=tk.LEFT)
+        
+        self.weight_vars = {}
+        
+        # Populate a 3x3 grid for the 9 moves
+        for i in range(len(MOVE_NAMES)):
+            row = i // 3
+            col = i % 3
+            
+            cell = tk.Frame(self.grid_frame)
+            cell.grid(row=row, column=col, padx=5, pady=2)
+            
+            tk.Label(cell, text=f"{MOVE_NAMES[i]}:", font=("Arial", 9)).pack(side=tk.LEFT)
+            
+            var = tk.IntVar(value=10)  # Default weight is 10
+            self.weight_vars[i] = var
+            tk.Spinbox(cell, from_=0, to=100, textvariable=var, width=3).pack(side=tk.LEFT)
+
+    def get(self):
+        try:
+            # Returns a dictionary of { 'U': 1, 'U2': 2, ... }
+            return [self.weight_vars[move].get() for move in range(len(MOVE_NAMES))]
+        except tk.TclError:
+            raise ValueError("Os pesos devem ser números inteiros válidos.")
+
+
 class ControlPanel(tk.Frame):
-    """Encapsulates the top control bar (Algorithm selection and Solve button)."""
+    """Encapsulates the top control bar (Algorithm selection, dynamic params, and Solve button)."""
     def __init__(self, parent, on_solve_callback, **kwargs):
         super().__init__(parent, pady=10, **kwargs)
         self.on_solve_callback = on_solve_callback
+        
+        # Categorize algorithms
+        self.algos_lim = ['Profundidade Limitada', 'Aprofundamento Iterativo']
+        self.algos_weights = ['Custo Uniforme', 'Greedy', 'A*', 'IDA* (AIA)']
+        
         self._setup_ui()
 
     def _setup_ui(self):
-        tk.Label(self, text="Método de Busca:", font=std_font).pack(side=tk.LEFT, padx=10)
+        # --- Top Row (Combo and Button) ---
+        self.top_row = tk.Frame(self)
+        self.top_row.pack(fill=tk.X)
+
+        tk.Label(self.top_row, text="Método de Busca:", font=std_font).pack(side=tk.LEFT, padx=10)
         
         self.algo_var = tk.StringVar()
         algos = ['Amplitude', 'Profundidade', 'Profundidade Limitada', 'Aprofundamento Iterativo', 
                  'Bidirecional', 'Custo Uniforme', 'Greedy', 'A*', 'IDA* (AIA)']
-        self.algo_combo = ttk.Combobox(self, textvariable=self.algo_var, values=algos, state="readonly", width=25)
+        self.algo_combo = ttk.Combobox(self.top_row, textvariable=self.algo_var, values=algos, state="readonly", width=25)
         self.algo_combo.current(0)
         self.algo_combo.pack(side=tk.LEFT, padx=10)
+        self.algo_combo.bind("<<ComboboxSelected>>", self._update_dynamic_params)
 
-        self.btn_solve = tk.Button(self, text="Resolver Cubo", bg="#4CAF50", fg="white",  
+        self.btn_solve = tk.Button(self.top_row, text="Resolver Cubo", bg="#4CAF50", fg="white",  
                                    activebackground="#0A480C", activeforeground="white",
                                    font=std_font, command=self._trigger_solve)
         self.btn_solve.pack(side=tk.LEFT, padx=20)
 
+        # --- Bottom Row (Dynamic Parameters) ---
+        self.param_row = tk.Frame(self)
+        self.param_row.pack(fill=tk.X, pady=(10, 0)) # Slight padding from top row
+
+        # Instantiate both parameter panels, but don't pack them yet
+        self.lim_param = LimParam(self.param_row)
+        self.weights_param = WeightsParam(self.param_row)
+
+        # Ensure correct UI state on load
+        self._update_dynamic_params()
+
+    def _update_dynamic_params(self, event=None):
+        """Hides/Shows the relevant parameter configuration."""
+        algo = self.algo_var.get()
+        
+        # Hide both first
+        self.lim_param.pack_forget()
+        self.weights_param.pack_forget()
+        
+        # Show the correct one
+        if algo in self.algos_lim:
+            self.lim_param.pack(side=tk.LEFT, padx=10)
+        elif algo in self.algos_weights:
+            self.weights_param.pack(side=tk.LEFT, padx=10)
+
     def _trigger_solve(self):
-        # Pass the selected algorithm back to the main controller
-        self.on_solve_callback(self.algo_var.get())
+        algo = self.algo_var.get()
+        
+        try:
+            # Extract parameters if the algorithm requires them
+            if algo in self.algos_lim:
+                lim = self.lim_param.get()
+                weights = None
+            elif algo in self.algos_weights:
+                lim = None
+                weights = self.weights_param.get()
+            else:
+                lim = None
+                weights = None
+        except ValueError as e:
+            # Catches the Tkinter TclError (blank input or letters) raised in our param classes
+            messagebox.showwarning("Entrada Inválida", str(e))
+            return
+            
+        # Pass the selected algorithm and a dict of params back to the main controller
+        self.on_solve_callback(algo, lim, weights)
 
 
 class StatesPanel(tk.Frame):
@@ -420,7 +542,7 @@ class RubiksSolverGUI:
         self.results_panel = ResultsPanel(self.root)
         self.results_panel.pack(fill=tk.BOTH, expand=True)
 
-    def solve(self, algo):
+    def solve(self, algo, lim, weights):
         """Called by the ControlPanel when the solve button is clicked."""
         start_sticker_cube = self.states_panel.cube_initial.cube
         goal_sticker_cube = self.states_panel.cube_goal.cube
@@ -439,10 +561,9 @@ class RubiksSolverGUI:
         id_goal = goal_sticker_cube.get_cube().get_id()
         
         # Backend Processing
-        solution_path = apply_algorithm(algo, id_start, id_goal)
+        solution_path, mock_cost = apply_algorithm(algo, id_start, id_goal, lim, weights)
         
         # Data formatting
-        mock_cost = len(solution_path) - 1
         mock_path_str = stringify_path(solution_path)
         
         # Dispatch data to the presentation layer (UI components)
