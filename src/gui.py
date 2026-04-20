@@ -387,7 +387,10 @@ class StatesPanel(tk.Frame):
         self.btn_next.config(state=tk.NORMAL if self.current_step < total_steps else tk.DISABLED)
 
     def scramble(self, cubeNet: CubeNet):
-        cubeNet.cube.scramble()
+        try:
+            cubeNet.cube.scramble()
+        except:
+            cubeNet.cube = StickersCube().scramble()
         cubeNet.draw_net()
         if cubeNet.on_click_callback:
             cubeNet.on_click_callback()
