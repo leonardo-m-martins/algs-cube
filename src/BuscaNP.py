@@ -1,5 +1,64 @@
 from collections import deque
 from src.Node import Node
+import numpy as np
+from numba import njit, uint32, typed, types
+
+caminho_type = types.ListType(types.uint32)
+
+#--------------------------------------------------------------------------    
+# EXIBE O CAMINHO ENCONTRADO NA ÁRVORE DE BUSCA
+#--------------------------------------------------------------------------  
+@njit(caminho_type(uint32, uint32, uint32[::1]))
+def exibir_caminho(inicio,fim,pai):
+    atual = fim
+    caminho = typed.List.empty_list(types.uint32)
+    while atual != inicio:
+        caminho.append(atual)
+        atual = pai[atual]
+    caminho.append(atual)
+    return caminho
+#--------------------------------------------------------------------------
+# BUSCA EM AMPLITUDE - GRAFO
+#--------------------------------------------------------------------------
+@njit(caminho_type(uint32, uint32, uint32[:, ::1]))
+def amplitude_grafo(inicio,fim,grafo):
+    if inicio == fim:
+        caminho = typed.List.empty_list(types.uint32)
+        caminho.append(inicio)
+        return caminho
+    
+    fila = np.empty(len(grafo), dtype=np.uint32)
+    fila[0] = inicio
+    head = 0
+    tail = 1
+
+    pai = np.empty(len(grafo), dtype=np.uint32)
+
+    # 255 == False, qualquer outro == True
+    visitado = np.full(len(grafo), 255, dtype=np.uint8)
+    visitado[inicio] = 0
+
+    while head < tail:
+        atual = fila[head]
+        filhos = grafo[atual]
+
+        for novo in filhos:
+            # verifica se foi visitado
+            if visitado[novo] != 255: continue
+            # marca como visitado (com valor = v1)
+            visitado[novo] = visitado[atual] + 1
+            # adiciona à fila
+            fila[tail] = novo
+            tail += 1
+            # guarda o pai de "novo"
+            pai[novo] = atual
+            # verifica se é o objetivo
+            if novo == fim:
+                return exibir_caminho(inicio,fim,pai)
+        
+        head += 1
+    
+    raise ValueError("Nenhum caminho entre inicio e fim")
 
 class buscaNP(object):
 #--------------------------------------------------------------------------
