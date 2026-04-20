@@ -59,6 +59,47 @@ def amplitude_grafo(inicio,fim,grafo):
         head += 1
     
     raise ValueError("Nenhum caminho entre inicio e fim")
+#--------------------------------------------------------------------------
+# BUSCA EM PROFUNDIDADE - GRAFO
+#--------------------------------------------------------------------------
+@njit(caminho_type(uint32, uint32, uint32[:, ::1]))
+def profundidade_grafo(inicio, fim, grafo):
+    if inicio == fim:
+        caminho = typed.List.empty_list(types.uint32)
+        caminho.append(inicio)
+        return caminho
+    
+    pilha = np.empty(len(grafo), dtype=np.uint32)
+    pilha[0] = inicio
+    top = 0
+
+    pai = np.empty(len(grafo), dtype=np.uint32)
+
+    # 255 == False, qualquer outro == True
+    visitado = np.full(len(grafo), 255, dtype=np.uint8)
+    visitado[inicio] = 0
+
+    while top >= 0:
+        # retira da pilha
+        atual = pilha[top]
+        top -= 1
+        filhos = grafo[atual]
+
+        for novo in filhos:
+            # verifica se foi visitado
+            if visitado[novo] != 255: continue
+            # marca como visitado (com valor = 1)
+            visitado[novo] = 1
+            # adiciona à pilha
+            top += 1
+            pilha[top] = novo
+            # guarda o pai de "novo"
+            pai[novo] = atual
+            # verifica se é o objetivo
+            if novo == fim:
+                return exibir_caminho(inicio,fim,pai)
+
+    raise ValueError("Nenhum caminho entre inicio e fim")
 
 class buscaNP(object):
 #--------------------------------------------------------------------------
