@@ -29,7 +29,7 @@ class buscaP(object):
         while node is not None:
             caminho.append(node.estado)
             node = node.pai
-        #caminho.reverse()
+        caminho.reverse()
         return caminho
 #--------------------------------------------------------------------------    
 # GERA H DE FORMA ALEATÓRIAv - GRAFO
@@ -85,9 +85,7 @@ class buscaP(object):
     
             # Chegou ao objetivo
             if atual.estado == fim:
-                caminho = self.exibirCaminho(atual)
-                caminho.reverse()
-                return caminho, atual.v2
+                return self.exibirCaminho(atual), atual.v2
     
             # Gera sucessores - grafo
             ind = nos.index(atual.estado)
@@ -108,13 +106,14 @@ class buscaP(object):
 # GREEDY - GRAFO
 # -----------------------------------------------------------------------------
 # Alterações: adicionado um parâmetro "pesos" em que é passado o custo de cada movimento
-    def greedy_grafo(self,inicio,fim,nos,grafo,pesos):
+#             adicionado um parâmetro "heurística" em que é passado uma pruning table
+    def greedy_grafo(self,inicio,fim,nos,grafo,pesos,heuristica):
         # Origem igual a destino
         if inicio == fim:
             return [inicio], 0
         
         # Fila de prioridade baseada em deque + inserção ordenada
-        lista = deque()
+        lista = list()
         raiz = NodeP(None, inicio, 0, None, None, 0)
         lista.append(raiz)
     
@@ -124,7 +123,7 @@ class buscaP(object):
         # loop de busca
         while lista:
             # remove o primeiro nó
-            atual = lista.popleft()
+            atual = heapq.heappop(lista)
             valor_atual = atual.v2
     
             # Chegou ao objetivo
@@ -138,7 +137,7 @@ class buscaP(object):
             for novo in filhos:
                 # custo acumulado até o sucessor
                 v2 = valor_atual + novo[1]
-                v1 = self.heuristica_grafo(nos,novo[0],fim)  
+                v1 = heuristica[novo[0]] 
     
                 # Não visitado ou custo melhor
                 if (novo[0] not in visitado) or (v2 < visitado[novo[0]].v2):

@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from src.stickers import StickersCube, Subcubes, Colors, OFFSETS
-from src.cube import Cube, get_state_lup, grafo, nos
+from src.cube import Cube, get_state_lup, grafo, nos, get_heuristic
 from src.BuscaNP import buscaNP
 from src.BuscaP import buscaP
 import numpy as np
@@ -24,7 +24,7 @@ def stringify_path(path: list) -> str:
     return ' '.join(moves)
 
 
-def apply_algorithm(algo: str, initial, objective, lim: int=14, weights: tuple=None):
+def apply_algorithm(algo: str, initial, objective, lim: int=14, weights: tuple=None, heuristic: np.ndarray=None):
     algos = ('Amplitude', 'Profundidade', 'Profundidade Limitada', 
              'Aprofundamento Iterativo', 'Bidirecional', 'Custo Uniforme', 
              'Greedy', 'A*', 'IDA* (AIA)')
@@ -45,8 +45,8 @@ def apply_algorithm(algo: str, initial, objective, lim: int=14, weights: tuple=N
         return caminho, len(caminho) - 1
     elif algo == algos[5]:
         return p_busca.custo_uniforme_grafo(initial, objective, nos, grafo, weights)
-    # elif algo == algos[6]:
-    #     return p_busca.greedy_grafo(initial, objective, nos, grafo, weights)
+    elif algo == algos[6]:
+        return p_busca.greedy_grafo(initial, objective, nos, grafo, weights, heuristic)
     # elif algo == algos[7]:
     #     return p_busca.a_estrela_grafo(initial, objective, nos, grafo, weights)
     # elif algo == algos[8]:
@@ -111,12 +111,13 @@ class ColorSelector(tk.Frame):
 
 class CubeNet(tk.Canvas):
     """Componente gráfico que desenha a planificação de um cubo 2x2x2."""
-    def __init__(self, master, color_selector: ColorSelector, sticker_size=30, editable=True, cube: StickersCube=None, **kwargs):
+    def __init__(self, master, color_selector: ColorSelector, on_click_callback=None, sticker_size=30, editable=True, cube: StickersCube=None, **kwargs):
         super().__init__(master, width=sticker_size*8, height=sticker_size*6, bg='#f0f0f0', highlightthickness=0, **kwargs)
         self.size = sticker_size
         self.editable = editable
         self.stickers = {} # Armazena os IDs dos retângulos
         self.color_selector = color_selector
+        self.on_click_callback = on_click_callback
 
         if cube:
             self.cube = cube
@@ -154,6 +155,9 @@ class CubeNet(tk.Canvas):
             self.itemconfig(rect_id, fill=next_color)
             key, idx = self.stickers[rect_id]
             self.cube.state[key][idx] = next_color_idx
+
+            if self.on_click_callback:
+                self.on_click_callback()
 
 class LimParam(tk.Frame):
     """Component for single integer input (Depth Limit)."""
@@ -295,6 +299,7 @@ class StatesPanel(tk.Frame):
         self.solution_path = []
         self.current_step = 0
         self._setup_ui(color_selector)
+        self.update_heuristic()
 
     def _setup_ui(self, color_selector: ColorSelector):
         self.alert_banner = AlertBanner(self)
@@ -318,7 +323,7 @@ class StatesPanel(tk.Frame):
         # Estado Objetivo
         lbl_goal = tk.Label(self, text="Estado Objetivo", font=std_font)
         lbl_goal.grid(row=0, column=1, sticky="s")
-        self.cube_goal = CubeNet(self, color_selector)
+        self.cube_goal = CubeNet(self, color_selector, self.update_heuristic)
         self.cube_goal.grid(row=1, column=1, padx=10, pady=10, sticky="n")
 
         # Visualizador do Resultado Gráfico
@@ -384,10 +389,14 @@ class StatesPanel(tk.Frame):
     def scramble(self, cubeNet: CubeNet):
         cubeNet.cube.scramble()
         cubeNet.draw_net()
+        if cubeNet.on_click_callback:
+            cubeNet.on_click_callback()
 
     def reset_cube(self, cubeNet: CubeNet):
         cubeNet.cube = StickersCube()
         cubeNet.draw_net()
+        if cubeNet.on_click_callback:
+            cubeNet.on_click_callback()
 
     def validate_cube(self, name: str, cube: StickersCube) -> bool:
         if not cube.validate_stickers():
@@ -402,6 +411,15 @@ class StatesPanel(tk.Frame):
             self.alert_banner.show(f"{name} inválido: Orientação inválida")
             return False
         return True
+    
+    def validate_cube_silent(self, cube: StickersCube) -> bool:
+        if not cube.validate_stickers():
+            return False
+        try:
+            cube_arr = cube.get_cube()
+        except:
+            return False
+        return cube_arr.validate_ori()
 
     def prev_step(self):
         if self.current_step > 0:
@@ -413,6 +431,12 @@ class StatesPanel(tk.Frame):
             self.current_step += 1
             self._update_viewer()
 
+    def update_heuristic(self):
+        cube = self.cube_goal.cube
+        if not self.validate_cube_silent(cube):
+            return
+        id_goal = cube.get_cube().get_id()
+        self.heuristic = get_heuristic(id_goal)
 
 class ResultsPanel(tk.Frame):
     """Encapsulates the textual path output, cost, and pagination logic."""
@@ -559,9 +583,11 @@ class RubiksSolverGUI:
 
         id_start = start_sticker_cube.get_cube().get_id()
         id_goal = goal_sticker_cube.get_cube().get_id()
+
+        heuristic = self.states_panel.heuristic
         
         # Backend Processing
-        solution_path, mock_cost = apply_algorithm(algo, id_start, id_goal, lim, weights)
+        solution_path, mock_cost = apply_algorithm(algo, id_start, id_goal, lim, weights, heuristic)
         
         # Data formatting
         mock_path_str = stringify_path(solution_path)
