@@ -143,6 +143,50 @@ def prof_limitada_grafo(inicio,fim,grafo,lim):
                 return exibir_caminho(inicio,fim,pai)
 
     return typed.List.empty_list(uint32)
+#--------------------------------------------------------------------------
+# BUSCA EM APROFUNDAMENTO ITERATIVO - GRAFO
+#--------------------------------------------------------------------------
+@njit(caminho_type(uint32, uint32, uint32[:, ::1], int32))
+def aprof_iterativo_grafo(inicio,fim,grafo,lim_max):
+    if inicio == fim:
+        caminho = typed.List.empty_list(types.uint32)
+        caminho.append(inicio)
+        return caminho
+    
+    for lim in range(1, lim_max + 1):
+        pilha = np.empty(len(grafo), dtype=np.uint32)
+        pilha[0] = inicio
+        top = 0
+
+        pai = np.empty(len(grafo), dtype=np.uint32)
+
+        visitado = np.full(len(grafo), -1, dtype=np.int32)
+        visitado[inicio] = 0
+
+        while top >= 0:
+            # retira da pilha
+            atual = pilha[top]
+            top -= 1
+            filhos = grafo[atual]
+
+            if visitado[atual] >= lim: continue
+
+            for novo in filhos:
+                # verifica se foi visitado
+                if visitado[novo] != -1 and visitado[novo] <= visitado[atual] + 1: continue
+                # marca como visitado (com valor = v1)
+                visitado[novo] = visitado[atual] + 1
+                # adiciona à pilha
+                top += 1
+                pilha[top] = novo
+                # guarda o pai de "novo"
+                pai[novo] = atual
+                # verifica se é o objetivo
+                if novo == fim:
+                    return exibir_caminho(inicio,fim,pai)
+
+    return typed.List.empty_list(uint32)
+
 
 class buscaNP(object):
 #--------------------------------------------------------------------------
