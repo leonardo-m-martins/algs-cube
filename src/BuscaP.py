@@ -2,6 +2,64 @@ from collections import deque
 from src.NodeP import NodeP
 from math import sqrt, fabs
 import heapq
+import numpy as np
+from numba import njit, uint32, int32, typed, types, typeof
+
+caminho_type = types.ListType(types.uint32)
+
+#--------------------------------------------------------------------------    
+# EXIBE O CAMINHO ENCONTRADO NA ÁRVORE DE BUSCA
+#--------------------------------------------------------------------------    
+@njit(caminho_type(uint32, uint32, uint32, uint32[::1]))
+def exibir_caminho(custo, inicio, fim, pai):
+    caminho = typed.List.empty_list(uint32)
+    atual = fim
+    while atual != inicio:
+        caminho.append(atual)
+        atual = pai[atual]
+    caminho.append(inicio)
+    caminho.append(custo)
+    caminho.reverse()
+    return caminho
+# -----------------------------------------------------------------------------
+# CUSTO UNIFORME - GRAFO
+# -----------------------------------------------------------------------------
+@njit(caminho_type(uint32, uint32, uint32[:, ::1], uint32[::1]))
+def custo_uniforme_grafo(inicio,fim,grafo,pesos):
+    if inicio == fim:
+        caminho = typed.List.empty_list(uint32)
+        caminho.append(inicio)
+        return caminho
+    
+    MAX_UINT32 = np.uint32(4294967295)
+    
+    lista = [(uint32(0), uint32(inicio))]
+
+    visitado = np.full(len(grafo), MAX_UINT32, dtype=np.uint32)
+
+    pai = np.empty(len(grafo), dtype=np.uint32)
+
+    while lista:
+        tup = heapq.heappop(lista)
+        valor = tup[0]
+        atual = tup[1]
+
+        if atual == fim:
+            return exibir_caminho(valor, inicio, fim, pai)
+        
+        filhos = grafo[atual]
+        for i in range(len(filhos)):
+            novo = filhos[i]
+            valor_novo = uint32(valor + pesos[i])
+
+            if visitado[novo] != MAX_UINT32 and visitado[novo] <= valor_novo: continue
+
+            heapq.heappush(lista, (valor_novo, novo))
+            visitado[novo] = valor_novo
+            pai[novo] = atual
+    
+    return typed.List.empty_list(uint32)
+
 
 class buscaP(object):
 #--------------------------------------------------------------------------
