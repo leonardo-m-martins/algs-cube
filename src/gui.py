@@ -15,13 +15,19 @@ MOVE_NAMES = ['U', 'U2', 'U3', 'R', 'R2', 'R3', 'F', 'F2', 'F3']
 
 p_busca = buscaP()
 
-def stringify_path(path: list) -> str:
-    moves = []
-    for i in range(len(path) - 1):
-        move_idx = np.where(grafo[path[i]] == path[i+1])[0][0]
-        moves.append(MOVE_NAMES[move_idx])
-    return ' '.join(moves)
+# Transforme os nomes em um array NumPy para indexação rápida
+MOVE_NAMES_ARR = np.array(['U', 'U2', 'U3', 'R', 'R2', 'R3', 'F', 'F2', 'F3'])
 
+def stringify_path(path):
+    path = np.array(path)
+    curr = path[:-1]
+    nxt = path[1:]
+    
+    mask = (grafo[curr] == nxt[:, None])
+    
+    move_indices = np.argmax(mask, axis=1)
+    
+    return MOVE_NAMES_ARR[move_indices]
 
 def apply_algorithm(algo: str, initial, objective, lim: int=14, weights: tuple=None, heuristic: np.ndarray=None):
     algos = ('Amplitude', 'Profundidade', 'Profundidade Limitada', 
@@ -444,9 +450,9 @@ class ResultsPanel(tk.Frame):
     """Encapsulates the textual path output, cost, and pagination logic."""
     def __init__(self, parent, **kwargs):
         super().__init__(parent, padx=20, pady=10, **kwargs)
-        self.full_path_str = ""
+        self.full_path = []
         self.current_page = 0
-        self.chars_per_page = 380
+        self.moves_per_page = 100
         self._setup_ui()
 
     def _setup_ui(self):
@@ -468,19 +474,19 @@ class ResultsPanel(tk.Frame):
         self.btn_next_page = tk.Button(self.pagination_frame, text="Próximo >", command=self.next_page, state=tk.DISABLED)
         self.btn_next_page.pack(side=tk.RIGHT)
 
-    def display_results(self, algo, cost, path_str):
+    def display_results(self, algo, cost, path):
         self.lbl_cost.config(text=f"Custo do Caminho: {cost} | Algoritmo: {algo}")
-        self.full_path_str = path_str
+        self.full_path = path
         self.current_page = 0
         self._update_page_view()
 
     def _update_page_view(self):
-        total_len = len(self.full_path_str)
-        total_pages = max(1, math.ceil(total_len / self.chars_per_page))
+        total_len = len(self.full_path)
+        total_pages = max(1, math.ceil(total_len / self.moves_per_page))
         
-        start_idx = self.current_page * self.chars_per_page
-        end_idx = start_idx + self.chars_per_page
-        page_text = self.full_path_str[start_idx:end_idx]
+        start_idx = self.current_page * self.moves_per_page
+        end_idx = start_idx + self.moves_per_page
+        page_text = ' '.join(self.full_path[start_idx:end_idx])
         
         self.txt_path.config(state=tk.NORMAL)
         self.txt_path.delete(1.0, tk.END)
@@ -497,7 +503,7 @@ class ResultsPanel(tk.Frame):
             self._update_page_view()
 
     def next_page(self):
-        total_pages = math.ceil(len(self.full_path_str) / self.chars_per_page)
+        total_pages = math.ceil(len(self.full_path) / self.moves_per_page)
         if self.current_page < total_pages - 1:
             self.current_page += 1
             self._update_page_view()
