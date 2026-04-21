@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from src.stickers import StickersCube, Subcubes, Colors, OFFSETS
 from src.cube import Cube, get_state_lup, grafo, nos, get_heuristic
-from src.BuscaNP import buscaNP
+from src.BuscaNP import amplitude_grafo, profundidade_grafo, prof_limitada_grafo, aprof_iterativo_grafo, bidirecional_grafo
 from src.BuscaP import buscaP
 import numpy as np
 import math
@@ -13,7 +13,6 @@ COLORS_REVERSED_MAP = {value: key for key, value in COLORS.items()}
 
 MOVE_NAMES = ['U', 'U2', 'U3', 'R', 'R2', 'R3', 'F', 'F2', 'F3']
 
-busca = buscaNP()
 p_busca = buscaP()
 
 def stringify_path(path: list) -> str:
@@ -29,19 +28,19 @@ def apply_algorithm(algo: str, initial, objective, lim: int=14, weights: tuple=N
              'Aprofundamento Iterativo', 'Bidirecional', 'Custo Uniforme', 
              'Greedy', 'A*', 'IDA* (AIA)')
     if algo == algos[0]:
-        caminho = busca.amplitude_grafo(initial, objective, nos=nos, grafo=grafo)
+        caminho = amplitude_grafo(initial, objective, grafo)
         return caminho, len(caminho) - 1
     elif algo == algos[1]:
-        caminho = busca.profundidade_grafo(initial, objective, nos, grafo)
+        caminho = profundidade_grafo(initial, objective, grafo)
         return caminho, len(caminho) - 1
     elif algo == algos[2]:
-        caminho = busca.prof_limitada_grafo(initial, objective, nos, grafo, lim)
+        caminho = prof_limitada_grafo(initial, objective, grafo, lim)
         return caminho, len(caminho) - 1
     elif algo == algos[3]:
-        caminho = busca.aprof_iterativo_grafo(initial, objective, nos, grafo, lim)
+        caminho = aprof_iterativo_grafo(initial, objective, grafo, lim)
         return caminho, len(caminho) - 1
     elif algo == algos[4]:
-        caminho = busca.bidirecional_grafo(initial, objective, nos, grafo)
+        caminho = bidirecional_grafo(initial, objective, grafo)
         return caminho, len(caminho) - 1
     elif algo == algos[5]:
         return p_busca.custo_uniforme_grafo(initial, objective, nos, grafo, weights)
