@@ -18,6 +18,27 @@ def exibir_caminho(inicio,fim,pai):
     caminho.append(atual)
     caminho.reverse()
     return caminho
+#--------------------------------------------------------------------------    
+# EXIBE O CAMINHO ENCONTRADO NA ÁRVORE DE BUSCA - BIDIRECIONAL
+#--------------------------------------------------------------------------
+@njit(caminho_type(uint32, uint32, uint32, uint32[::1], uint32[::1]))
+def exibir_caminho_bid(inicio,encontro,fim,pai1,pai2):
+    caminho = typed.List.empty_list(uint32)
+    # bid 1
+    atual = encontro
+    while atual != inicio:
+        caminho.append(atual)
+        atual = pai1[atual]
+    caminho.append(atual)
+    caminho.reverse()
+
+    # bid 2
+    atual = encontro
+    while atual != fim:
+        atual = pai2[atual]
+        caminho.append(atual)
+    
+    return caminho
 #--------------------------------------------------------------------------
 # BUSCA EM AMPLITUDE - GRAFO
 #--------------------------------------------------------------------------
@@ -185,6 +206,74 @@ def aprof_iterativo_grafo(inicio,fim,grafo,lim_max):
                 if novo == fim:
                     return exibir_caminho(inicio,fim,pai)
 
+    return typed.List.empty_list(uint32)
+#--------------------------------------------------------------------------
+# BUSCA BIDIRECIONAL - GRAFO
+#--------------------------------------------------------------------------
+def bidirecional_grafo(inicio,fim,grafo):
+    if inicio == fim:
+        caminho = typed.List.empty_list(uint32)
+        caminho.append(inicio)
+        return caminho
+    
+    fila1 = np.empty(len(grafo), dtype=np.uint32)
+    fila1[0] = inicio
+    head1 = 0
+    tail1 = 1
+    pai1 = np.empty(len(grafo), dtype=np.uint32)
+
+    fila2 = np.empty(len(grafo), dtype=np.uint32)
+    fila2[0] = fim
+    head2 = 0
+    tail2 = 1
+    pai2 = np.empty(len(grafo), dtype=np.uint32)
+
+    # 255 == False, qualquer outro == True
+    visitado1 = np.full(len(grafo), 255, dtype=np.uint8)
+    visitado1[inicio] = 0
+
+    visitado2 = np.full(len(grafo), 255, dtype=np.uint8)
+    visitado2[fim] = 0
+
+    while head1 < tail1 and head2 < tail2:
+        for _ in range(head1, tail1):
+            atual1 = fila1[head1]
+            filhos1 = grafo[atual1]
+
+            for novo in filhos1:
+                # verifica se foi visitado
+                if visitado1[novo] != 255: continue
+                # marca como visitado (com valor = v1)
+                visitado1[novo] = visitado1[atual1] + 1
+                # adiciona à fila
+                fila1[tail1] = novo
+                tail1 += 1
+                # guarda o pai de "novo"
+                pai1[novo] = atual1
+                # verifica se é o objetivo
+                if visitado2[novo] != 255:
+                    return exibir_caminho_bid(inicio,novo,fim,pai1,pai2)
+            head1 += 1
+
+        for _ in range(head2, tail2):
+            atual2 = fila2[head2]
+            filhos2 = grafo[atual2]
+
+            for novo in filhos2:
+
+                if visitado2[novo] != 255: continue
+
+                visitado2[novo] = visitado2[atual2] + 1
+
+                fila2[tail2] = novo
+                tail2 += 1
+
+                pai2[novo] = atual2
+
+                if visitado1[novo] != 255:
+                    return exibir_caminho_bid(inicio,novo,fim,pai1,pai2)
+            head2 += 1
+    
     return typed.List.empty_list(uint32)
 
 
