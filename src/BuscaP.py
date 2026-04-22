@@ -3,8 +3,9 @@ from src.NodeP import NodeP
 from math import sqrt, fabs
 import heapq
 import numpy as np
-from numba import njit, uint32, int32, typed, types, typeof
+from numba import njit, uint32, uint8, typed, types, typeof
 
+NULL = np.uint32(4294967295)
 caminho_type = types.ListType(types.uint32)
 
 #--------------------------------------------------------------------------    
@@ -31,11 +32,9 @@ def custo_uniforme_grafo(inicio,fim,grafo,pesos):
         caminho.append(inicio)
         return caminho
     
-    MAX_UINT32 = np.uint32(4294967295)
-    
     lista = [(uint32(0), uint32(inicio))]
 
-    visitado = np.full(len(grafo), MAX_UINT32, dtype=np.uint32)
+    visitado = np.full(len(grafo), NULL, dtype=np.uint32)
 
     pai = np.empty(len(grafo), dtype=np.uint32)
 
@@ -52,7 +51,7 @@ def custo_uniforme_grafo(inicio,fim,grafo,pesos):
             novo = filhos[i]
             valor_novo = uint32(valor + pesos[i])
 
-            if visitado[novo] != MAX_UINT32 and visitado[novo] <= valor_novo: continue
+            if visitado[novo] != NULL and visitado[novo] <= valor_novo: continue
 
             heapq.heappush(lista, (valor_novo, novo))
             visitado[novo] = valor_novo
@@ -109,8 +108,52 @@ def greedy_grafo(inicio,fim,grafo,pesos,heuristica):
                 filho = NodeP(atual, novo, v1, None, None, v2)
                 visitado[novo] = filho
                 heapq.heappush(lista, filho)
-    return None
+
+    return [], -1
+# -----------------------------------------------------------------------------
+# A ESTRELA - GRAFO
+# -----------------------------------------------------------------------------
+def a_estrela_grafo(inicio,fim,grafo,pesos,heuristica):
+    # Origem igual a destino
+    if inicio == fim:
+        return [inicio], 0
     
+    # heurística deve ser multiplicada pelo menor peso para que ela "puxe" a busca para o resultado
+    menor_peso = min(pesos)
+    
+    # Fila de prioridade baseada em deque + inserção ordenada
+    lista = list()
+    raiz = NodeP(None, inicio, 0, None, None, 0)
+    lista.append(raiz)
+
+    # Controle de nós visitados
+    visitado = {inicio: raiz}
+    
+    # loop de busca
+    while lista:
+        # remove o primeiro nó
+        atual = heapq.heappop(lista)
+        valor_atual = atual.v2
+
+        # Chegou ao objetivo
+        if atual.estado == fim:
+            return exibir_caminho_node(atual), atual.v2
+
+        # Gera sucessores
+        filhos = grafo[atual.estado]
+
+        for i, novo in enumerate(filhos):
+            # custo acumulado até o sucessor
+            v2 = valor_atual + pesos[i]
+            v1 = v2 + heuristica[novo] * menor_peso
+
+            # Não visitado ou custo melhor
+            if (novo not in visitado) or (v2 < visitado[novo].v2):
+                filho = NodeP(atual, novo, v1, None, None, v2)
+                visitado[novo] = filho
+                heapq.heappush(lista, filho)
+
+    return [], -1
 
 class buscaP(object):
 #--------------------------------------------------------------------------
@@ -263,6 +306,9 @@ class buscaP(object):
         if inicio == fim:
             return [inicio], 0
         
+        # heurística deve ser multiplicada pelo menor peso para que ela "puxe" a busca para o resultado
+        menor_peso = min(pesos)
+        
         # Fila de prioridade baseada em deque + inserção ordenada
         lista = list()
         raiz = NodeP(None, inicio, 0, None, None, 0)
@@ -288,7 +334,7 @@ class buscaP(object):
             for novo in filhos:
                 # custo acumulado até o sucessor
                 v2 = valor_atual + novo[1]
-                v1 = v2 + heuristica[novo[0]]
+                v1 = v2 + heuristica[novo[0]] * menor_peso
     
                 # Não visitado ou custo melhor
                 if (novo[0] not in visitado) or (v2 < visitado[novo[0]].v2):
