@@ -59,7 +59,58 @@ def custo_uniforme_grafo(inicio,fim,grafo,pesos):
             pai[novo] = atual
     
     return typed.List.empty_list(uint32)
+#--------------------------------------------------------------------------    
+# EXIBE O CAMINHO ENCONTRADO NA ÁRVORE DE BUSCA
+#--------------------------------------------------------------------------    
+def exibir_caminho_node(node):
+    caminho = []
+    while node is not None:
+        caminho.append(node.estado)
+        node = node.pai
+    caminho.reverse()
+    return caminho
+# -----------------------------------------------------------------------------
+# GREEDY - GRAFO
+# -----------------------------------------------------------------------------
+def greedy_grafo(inicio,fim,grafo,pesos,heuristica):
+    # Origem igual a destino
+    if inicio == fim:
+        return [inicio], 0
+    
+    # Fila de prioridade baseada em deque + inserção ordenada
+    lista = list()
+    raiz = NodeP(None, inicio, 0, None, None, 0)
+    lista.append(raiz)
 
+    # Controle de nós visitados
+    visitado = {inicio: raiz}
+    
+    # loop de busca
+    while lista:
+        # remove o primeiro nó
+        atual = heapq.heappop(lista)
+        valor_atual = atual.v2
+
+        # Chegou ao objetivo
+        if atual.estado == fim:
+            return exibir_caminho_node(atual), atual.v2
+
+        # Gera sucessores
+        ind = atual.estado
+        filhos = grafo[ind]
+
+        for i, novo in enumerate(filhos):
+            # custo acumulado até o sucessor
+            v2 = valor_atual + pesos[i]
+            v1 = heuristica[novo]
+
+            # Não visitado ou custo melhor
+            if (novo not in visitado) or (v2 < visitado[novo].v2):
+                filho = NodeP(atual, novo, v1, None, None, v2)
+                visitado[novo] = filho
+                heapq.heappush(lista, filho)
+    return None
+    
 
 class buscaP(object):
 #--------------------------------------------------------------------------
