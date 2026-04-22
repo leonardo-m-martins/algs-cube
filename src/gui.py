@@ -3,7 +3,7 @@ from tkinter import ttk, messagebox
 from src.stickers import StickersCube, Subcubes, Colors, OFFSETS
 from src.cube import Cube, get_state_lup, grafo, nos, get_heuristic
 from src.BuscaNP import amplitude_grafo, profundidade_grafo, prof_limitada_grafo, aprof_iterativo_grafo, bidirecional_grafo
-from src.BuscaP import buscaP
+from src.BuscaP import buscaP, custo_uniforme_grafo, greedy_grafo, a_estrela_grafo, aia_estrela_grafo
 import numpy as np
 import math
 
@@ -49,13 +49,15 @@ def apply_algorithm(algo: str, initial, objective, lim: int=14, weights: tuple=N
         caminho = bidirecional_grafo(initial, objective, grafo)
         return caminho, len(caminho) - 1
     elif algo == algos[5]:
-        return p_busca.custo_uniforme_grafo(initial, objective, nos, grafo, weights)
+        weights = np.array(weights, dtype=np.uint32)
+        caminho = custo_uniforme_grafo(initial, objective, grafo, weights)
+        return caminho[1:], caminho[0]
     elif algo == algos[6]:
-        return p_busca.greedy_grafo(initial, objective, nos, grafo, weights, heuristic)
+        return greedy_grafo(initial, objective, grafo, weights, heuristic)
     elif algo == algos[7]:
-        return p_busca.a_estrela_grafo(initial, objective, nos, grafo, weights, heuristic)
+        return a_estrela_grafo(initial, objective, grafo, weights, heuristic)
     elif algo == algos[8]:
-        return p_busca.aia_estrela_grafo(initial, objective, nos, grafo, weights, heuristic)
+        return aia_estrela_grafo(initial, objective, grafo, weights, heuristic)
     else: 
         raise Exception("Não implementado")
 
