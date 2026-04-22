@@ -3,7 +3,7 @@ from tkinter import ttk, messagebox
 from src.stickers import StickersCube, Subcubes, Colors, OFFSETS
 from src.cube import Cube, get_state_lup, grafo, nos, get_heuristic
 from src.BuscaNP import amplitude_grafo, profundidade_grafo, prof_limitada_grafo, aprof_iterativo_grafo, bidirecional_grafo
-from src.BuscaP import buscaP, custo_uniforme_grafo, greedy_grafo, a_estrela_grafo, aia_estrela_grafo
+from src.BuscaP import custo_uniforme_grafo, greedy_grafo, a_estrela_grafo, aia_estrela_grafo
 import numpy as np
 import math
 
@@ -12,8 +12,6 @@ COLORS = {Colors.WHITE: 'white', Colors.RED: 'red', Colors.BLUE: 'blue', Colors.
 COLORS_REVERSED_MAP = {value: key for key, value in COLORS.items()}
 
 MOVE_NAMES = ['U', 'U2', 'U3', 'R', 'R2', 'R3', 'F', 'F2', 'F3']
-
-p_busca = buscaP()
 
 # Transforme os nomes em um array NumPy para indexação rápida
 MOVE_NAMES_ARR = np.array(['U', 'U2', 'U3', 'R', 'R2', 'R3', 'F', 'F2', 'F3'])
