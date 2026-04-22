@@ -154,6 +154,60 @@ def a_estrela_grafo(inicio,fim,grafo,pesos,heuristica):
                 heapq.heappush(lista, filho)
 
     return [], -1
+# -----------------------------------------------------------------------------
+# AIA ESTRELA - GRAFO
+# -----------------------------------------------------------------------------
+def aia_estrela_grafo(inicio,fim,grafo,pesos,heuristica):
+    # heurística deve ser multiplicada pelo menor peso para que ela "puxe" a busca para o resultado
+    menor_peso = min(pesos)
+
+    lim = int(heuristica[inicio] * menor_peso)
+    # Origem igual a destino
+    if inicio == fim:
+        return [inicio], 0
+    
+    while True:
+        # Fila de prioridade baseada em deque + inserção ordenada
+        lista = list()
+        raiz = NodeP(None, inicio, 0, None, None, 0)
+        lista.append(raiz)
+    
+        # Controle de nós visitados
+        visitado = {inicio: raiz}
+        
+        # loop de busca
+        novo_lim = []
+        while lista:
+            # remove o primeiro nó
+            atual = heapq.heappop(lista)
+            valor_atual = atual.v2
+    
+            # Chegou ao objetivo
+            if atual.estado == fim:
+                return exibir_caminho_node(atual), atual.v2
+    
+            # Gera sucessores
+            filhos = grafo[atual.estado]
+    
+            for i, novo in enumerate(filhos):
+                # custo acumulado até o sucessor
+                v2 = valor_atual + pesos[i]
+                v1 = v2 + heuristica[novo] * menor_peso
+                
+                if v1<=lim:
+                    # Não visitado ou custo melhor
+                    if (novo not in visitado) or (v2 < visitado[novo].v2):
+                        filho = NodeP(atual, novo, v1, None, None, v2)
+                        visitado[novo] = filho
+                        heapq.heappush(lista, filho)
+                else:
+                    novo_lim.append(int(v1))
+        lim = (int)(sum(novo_lim)/(len(novo_lim)))
+        lista.clear()
+        visitado.clear()
+        novo_lim.clear()
+        
+    return [], -1
 
 class buscaP(object):
 #--------------------------------------------------------------------------
@@ -347,7 +401,9 @@ class buscaP(object):
 # -----------------------------------------------------------------------------
 # Alterações: adicionado um parâmetro "pesos" em que é passado o custo de cada movimento
     def aia_estrela_grafo(self,inicio,fim,nos,grafo,pesos,heuristica):
-        lim = int(heuristica[inicio])
+        # heurística deve ser multiplicada pelo menor peso para que ela "puxe" a busca para o resultado
+        menor_peso = min(pesos)
+        lim = int(heuristica[inicio] * menor_peso)
         # Origem igual a destino
         if inicio == fim:
             return [inicio], 0
@@ -379,7 +435,7 @@ class buscaP(object):
                 for novo in filhos:
                     # custo acumulado até o sucessor
                     v2 = valor_atual + novo[1]
-                    v1 = v2 + heuristica[novo[0]]
+                    v1 = v2 + heuristica[novo[0]] * menor_peso
                     
                     if v1<=lim:
                         # Não visitado ou custo melhor
