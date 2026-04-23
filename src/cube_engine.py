@@ -1,5 +1,5 @@
 import numpy as np
-from numba import njit
+from numba import njit, uint8, uint32, int64
 from src.static_data import perm_moves, ori_moves
 
 TOTAL_STATES = 3674160
@@ -12,7 +12,7 @@ def generate_cubes() -> np.ndarray:
 
     return grafo
 
-@njit
+@njit(uint32(uint32, uint32))
 def get_move_from_id(id: int, move: int) -> int:
     perm_id = id // 729
     ori_id = id % 729
@@ -22,7 +22,7 @@ def get_move_from_id(id: int, move: int) -> int:
 
     return perm_id * 729 + ori_id
 
-@njit
+@njit(uint8[::1](int64))
 def get_heuristic(initial_id: int) -> np.ndarray:
     pruning_table = np.full((TOTAL_STATES, ), 255, dtype=np.uint8)
     pruning_table[initial_id] = 0
