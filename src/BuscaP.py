@@ -101,7 +101,7 @@ def greedy_grafo(inicio,fim,grafo,pesos,heuristica):
         for i, novo in enumerate(filhos):
             # custo acumulado até o sucessor
             v2 = valor_atual + pesos[i]
-            v1 = heuristica[novo]
+            v1 = int(heuristica[novo])
 
             # Não visitado ou custo melhor
             if (novo not in visitado) or (v2 < visitado[novo].v2):
@@ -145,7 +145,7 @@ def a_estrela_grafo(inicio,fim,grafo,pesos,heuristica):
         for i, novo in enumerate(filhos):
             # custo acumulado até o sucessor
             v2 = valor_atual + pesos[i]
-            v1 = v2 + heuristica[novo] * menor_peso
+            v1 = v2 + int(heuristica[novo]) * menor_peso
 
             # Não visitado ou custo melhor
             if (novo not in visitado) or (v2 < visitado[novo].v2):
@@ -161,7 +161,7 @@ def aia_estrela_grafo(inicio,fim,grafo,pesos,heuristica):
     # heurística deve ser multiplicada pelo menor peso para que ela "puxe" a busca para o resultado
     menor_peso = min(pesos)
 
-    lim = int(heuristica[inicio] * menor_peso)
+    lim = int(heuristica[inicio]) * menor_peso
     # Origem igual a destino
     if inicio == fim:
         return [inicio], 0
@@ -192,7 +192,7 @@ def aia_estrela_grafo(inicio,fim,grafo,pesos,heuristica):
             for i, novo in enumerate(filhos):
                 # custo acumulado até o sucessor
                 v2 = valor_atual + pesos[i]
-                v1 = v2 + heuristica[novo] * menor_peso
+                v1 = v2 + int(heuristica[novo]) * menor_peso
                 
                 if v1<=lim:
                     # Não visitado ou custo melhor
