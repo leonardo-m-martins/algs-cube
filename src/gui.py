@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-from src.stickers import StickersCube, Subcubes, Colors, OFFSETS
-from src.cube import Cube, get_state_lup, grafo, nos, get_heuristic
+from src.stickers import StickersCube, Colors, OFFSETS
+from src.cube import get_state_lup, grafo, get_heuristic
 from src.BuscaNP import amplitude_grafo, profundidade_grafo, prof_limitada_grafo, aprof_iterativo_grafo, bidirecional_grafo
 from src.BuscaP import custo_uniforme_grafo, greedy_grafo, a_estrela_grafo, aia_estrela_grafo
 import numpy as np
