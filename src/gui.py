@@ -93,7 +93,7 @@ class ColorSelector(tk.Frame):
             btn.pack(side=tk.LEFT, padx=5, pady=5)
             self.buttons[i] = btn
 
-        self._select_color(0)
+        self._select_color(Colors.WHITE)
 
     def _select_color(self, index):
         """Handles the logic when a color button is clicked."""

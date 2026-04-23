@@ -271,9 +271,8 @@ class StickersCube:
         self.state = StickersCube(cube=cube, BLD=self.get_BLD()).state
 
     def rotate_x(self):
-        """Rotates the entire cube on the X axis (R face direction)."""
+        """Rotaciona o cubo no eixo x"""
         new_state = {}
-        # Mapping the movement of the pieces
         mapping = {
             Subcubes.FLU: Subcubes.BLU,
             Subcubes.BLU: Subcubes.BLD,
@@ -286,12 +285,11 @@ class StickersCube:
         }
         for old_pos, new_pos in mapping.items():
             colors = self.state[old_pos]
-            # X rotation swaps F/B (index 0) with U/D (index 2)
             new_state[new_pos] = [colors[2], colors[1], colors[0]]
         self.state = new_state
 
     def rotate_y(self):
-        """Rotates the entire cube on the Y axis (U face direction)."""
+        """Rotaciona o cubo no eixo y"""
         new_state = {}
         mapping = {
             Subcubes.FLU: Subcubes.BLU,
@@ -305,12 +303,11 @@ class StickersCube:
         }
         for old_pos, new_pos in mapping.items():
             colors = self.state[old_pos]
-            # Y rotation swaps F/B (index 0) with L/R (index 1)
             new_state[new_pos] = [colors[1], colors[0], colors[2]]
         self.state = new_state
 
     def rotate_z(self):
-        """Rotates the entire cube on the Z axis (F face direction)."""
+        """Rotaciona o cubo no eixo z"""
         new_state = {}
         mapping = {
             Subcubes.FLU: Subcubes.FRU,
@@ -324,16 +321,15 @@ class StickersCube:
         }
         for old_pos, new_pos in mapping.items():
             colors = self.state[old_pos]
-            # Z rotation swaps L/R (index 1) with U/D (index 2)
             new_state[new_pos] = [colors[0], colors[2], colors[1]]
         self.state = new_state
 
     def match_BLD(self, BLD: list) -> bool:
         """
-        Rotates the cube through its 24 possible spatial orientations 
-        until the BLD subcube matches the target_BLD colors.
-        Returns True if a match is found, False otherwise.
+        Rotaciona o cubo pelas 24 orientações espaciais possíveis
+        até que o subcubo BLD de self seja o mesmo de BLD
         """
+
         def _check_and_y():
             for _ in range(4):
                 if self.get_BLD() == BLD:
@@ -344,37 +340,15 @@ class StickersCube:
         if self.get_BLD() == BLD:
             return True
 
-        # Cycle through all 6 faces pointing Down, and rotate Y 4 times for each
-        
-        # 1. Start orientation (D face is down)
-        if _check_and_y(): return True
-        
-        # 2. B face is down
-        self.rotate_x()
-        if _check_and_y(): return True
-        
-        # 3. U face is down
-        self.rotate_x()
-        if _check_and_y(): return True
-        
-        # 4. F face is down
-        self.rotate_x()
-        if _check_and_y(): return True
-        
-        # Return to start orientation (X x 4 = 360 degrees)
-        self.rotate_x()
-        
-        # 5. R face is down
-        self.rotate_z()
-        if _check_and_y(): return True
-        
-        # 6. L face is down (Z x 2 from R-down puts L-down)
-        self.rotate_z()
-        self.rotate_z()
-        if _check_and_y(): return True
-        
-        # If no match is found, return the cube to its original spatial orientation
-        self.rotate_z()
+        # Percorre cada face do cubo, e rotaciona Y para cada uma
+        for _ in range(4):
+            if _check_and_y(): return True
+            self.rotate_x()
+
+        for _ in range(4):
+            if _check_and_y(): return True
+            self.rotate_z()
+
         return False
     
     def copy_match_BLD(self, BLD):
@@ -382,23 +356,6 @@ class StickersCube:
         new.match_BLD(BLD)
         return new
 
-"""
-              |--------|
-              |BLU-BRU-|
-              |--------|
-              |FLU-FRU-|
-              |--------|
-     |--------|--------|--------|--------|
-     |BLU-FLU-|FLU-FRU-|FRU-BRU-|BRU-BLU-|
-     |--------|--------|--------|--------|
-     |BLD-FLD-|FLD-FRD-|FRD-BRD-|BRD-BLD-|
-     |--------|--------|--------|--------|
-              |--------|
-              |FLD-FRD-|
-              |--------|
-              |BLD-BRD-|
-              |--------|
-"""
 OFFSETS_L = {
     Subcubes.BLU: (0, 2), # (x, y)
     Subcubes.BLD: (0, 3),
