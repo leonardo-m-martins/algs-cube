@@ -207,14 +207,15 @@ class WeightsParam(tk.Frame):
             
             var = tk.IntVar(value=10)  # Default weight is 10
             self.weight_vars[i] = var
-            tk.Spinbox(cell, from_=0, to=100, textvariable=var, width=3).pack(side=tk.LEFT)
+            tk.Spinbox(cell, from_=1, to=100, textvariable=var, width=3).pack(side=tk.LEFT)
 
     def get(self):
         try:
-            # Returns a dictionary of { 'U': 1, 'U2': 2, ... }
-            return [self.weight_vars[move].get() for move in range(len(MOVE_NAMES))]
+            weights = [self.weight_vars[move].get() for move in range(len(MOVE_NAMES))]
+            if any([w < 1 or w > 100 for w in weights]): raise tk.TclError()
+            return weights
         except tk.TclError:
-            raise ValueError("Os pesos devem ser números inteiros válidos.")
+            raise ValueError("Os pesos devem ser números inteiros válidos de 1 à 100.")
 
 
 class ControlPanel(tk.Frame):
