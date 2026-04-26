@@ -118,9 +118,6 @@ def a_estrela_grafo(inicio,fim,grafo,pesos,heuristica):
     if inicio == fim:
         return [inicio], 0
     
-    # heurística deve ser multiplicada pelo menor peso para que ela "puxe" a busca para o resultado
-    menor_peso = min(pesos)
-    
     # Fila de prioridade baseada em deque + inserção ordenada
     lista = list()
     raiz = NodeP(None, inicio, 0, None, None, 0)
@@ -145,7 +142,7 @@ def a_estrela_grafo(inicio,fim,grafo,pesos,heuristica):
         for i, novo in enumerate(filhos):
             # custo acumulado até o sucessor
             v2 = valor_atual + pesos[i]
-            v1 = v2 + int(heuristica[novo]) * menor_peso
+            v1 = v2 + int(heuristica[novo])
 
             # Não visitado ou custo melhor
             if (novo not in visitado) or (v2 < visitado[novo].v2):
@@ -158,10 +155,7 @@ def a_estrela_grafo(inicio,fim,grafo,pesos,heuristica):
 # AIA ESTRELA - GRAFO
 # -----------------------------------------------------------------------------
 def aia_estrela_grafo(inicio,fim,grafo,pesos,heuristica):
-    # heurística deve ser multiplicada pelo menor peso para que ela "puxe" a busca para o resultado
-    menor_peso = min(pesos)
-
-    lim = int(heuristica[inicio]) * menor_peso
+    lim = int(heuristica[inicio])
     # Origem igual a destino
     if inicio == fim:
         return [inicio], 0
@@ -192,7 +186,7 @@ def aia_estrela_grafo(inicio,fim,grafo,pesos,heuristica):
             for i, novo in enumerate(filhos):
                 # custo acumulado até o sucessor
                 v2 = valor_atual + pesos[i]
-                v1 = v2 + int(heuristica[novo]) * menor_peso
+                v1 = v2 + int(heuristica[novo])
                 
                 if v1<=lim:
                     # Não visitado ou custo melhor

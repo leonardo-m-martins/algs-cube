@@ -184,7 +184,7 @@ class LimParam(tk.Frame):
 
 class WeightsParam(tk.Frame):
     """Component for 9 integer inputs arranged in a compact grid."""
-    def __init__(self, parent, **kwargs):
+    def __init__(self, parent, on_change, **kwargs):
         super().__init__(parent, **kwargs)
         
         tk.Label(self, text="Pesos:", font=std_font).pack(side=tk.LEFT, padx=(5, 10))
@@ -193,6 +193,7 @@ class WeightsParam(tk.Frame):
         self.grid_frame = tk.Frame(self)
         self.grid_frame.pack(side=tk.LEFT)
         
+        self.on_change = on_change
         self.weight_vars = {}
         
         # Populate a 3x3 grid for the 9 moves
@@ -205,7 +206,8 @@ class WeightsParam(tk.Frame):
             
             tk.Label(cell, text=f"{MOVE_NAMES[i]}:", font=("Arial", 9)).pack(side=tk.LEFT)
             
-            var = tk.IntVar(value=10)  # Default weight is 10
+            var = tk.IntVar(value=1)  # Default weight is 1
+            var.trace_add("write", self.on_change)
             self.weight_vars[i] = var
             tk.Spinbox(cell, from_=1, to=100, textvariable=var, width=3).pack(side=tk.LEFT)
 
@@ -227,7 +229,7 @@ class ControlPanel(tk.Frame):
         # Categorize algorithms
         self.algos_lim = ['Profundidade Limitada', 'Aprofundamento Iterativo']
         self.algos_weights = ['Custo Uniforme', 'Greedy', 'A*', 'IDA* (AIA)']
-        
+        self.goal_id = 0
         self._setup_ui()
 
     def _setup_ui(self):
@@ -256,7 +258,7 @@ class ControlPanel(tk.Frame):
 
         # Instantiate both parameter panels, but don't pack them yet
         self.lim_param = LimParam(self.param_row)
-        self.weights_param = WeightsParam(self.param_row)
+        self.weights_param = WeightsParam(self.param_row, self.update_heuristic)
 
         # Ensure correct UI state on load
         self._update_dynamic_params()
@@ -297,14 +299,26 @@ class ControlPanel(tk.Frame):
         # Pass the selected algorithm and a dict of params back to the main controller
         self.on_solve_callback(algo, lim, weights)
 
+    def update_goal(self, new_goal):
+        self.goal_id = new_goal
+        self.update_heuristic()
+
+    def update_heuristic(self, *args):
+        try:
+            weights = np.array(self.weights_param.get(), dtype=np.uint16)
+            self.heuristic = get_heuristic(self.goal_id, weights)
+        except: # Fail silently
+            return
+
 
 class StatesPanel(tk.Frame):
     """Encapsulates the Initial, Goal, and Result viewers, plus step navigation."""
-    def __init__(self, parent, color_selector: ColorSelector, **kwargs):
+    def __init__(self, parent, color_selector: ColorSelector, callback, **kwargs):
         super().__init__(parent, **kwargs)
         self.solution_path = []
         self.current_step = 0
         self._setup_ui(color_selector)
+        self.callback = callback
         self.update_heuristic()
 
     def _setup_ui(self, color_selector: ColorSelector):
@@ -445,7 +459,7 @@ class StatesPanel(tk.Frame):
         if not self.validate_cube_silent(cube):
             return
         id_goal = cube.get_cube().get_id()
-        self.heuristic = get_heuristic(id_goal)
+        self.callback(id_goal)
 
 class ResultsPanel(tk.Frame):
     """Encapsulates the textual path output, cost, and pagination logic."""
@@ -567,7 +581,7 @@ class RubiksSolverGUI:
 
         self.color_selector = ColorSelector(self.root)
 
-        self.states_panel = StatesPanel(self.root, self.color_selector)
+        self.states_panel = StatesPanel(self.root, self.color_selector, self.control_panel.update_goal)
         self.states_panel.pack(fill=tk.BOTH, expand=True, pady=10)
         
         self.color_selector.pack()
@@ -593,7 +607,7 @@ class RubiksSolverGUI:
         id_start = start_sticker_cube.get_cube().get_id()
         id_goal = goal_sticker_cube.get_cube().get_id()
 
-        heuristic = self.states_panel.heuristic
+        heuristic = self.control_panel.heuristic
         
         # Backend Processing
         solution_path, mock_cost = apply_algorithm(algo, id_start, id_goal, lim, weights, heuristic)
